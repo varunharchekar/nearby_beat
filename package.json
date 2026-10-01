@@ -1,0 +1,26 @@
+{
+  "name": "nearby",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Weekly email about meaningful physical changes near a subscriber's address (Phase 2: grounded Dallas pilot).",
+  "type": "module",
+  "engines": { "node": ">=22.18" },
+  "scripts": {
+    "start": "node src/main.ts",
+    "dev": "NEARBY_MODE=fixture node --watch src/main.ts",
+    "test": "node --test 'test/*.test.ts'",
+    "typecheck": "tsc -p tsconfig.json",
+    "migrate": "node src/cli.ts migrate",
+    "refresh": "node src/cli.ts refresh",
+    "dispatch": "node src/cli.ts dispatch",
+    "check:sources": "node src/cli.ts check-sources"
+  },
+  "dependencies": {
+    "pg": "^8.13.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/pg": "^8.11.10",
+    "typescript": "^5.8.0"
+  }
+}

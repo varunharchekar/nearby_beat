@@ -12,6 +12,8 @@ export interface IssueItem {
   changeId: string; name: string; cat: string; type: ChangeEvent['type']; status: string; summary: string; why?: string;
   before?: string; after?: string; date: DateInfo | null; place: string; distanceMi: number; partly: boolean; late: boolean;
   occurredAt: number | null; evidenceLabel: string; conflict?: string[]; sources: EvidenceRef[]; isEvent: boolean;
+  /** Public location of the business or project (never the subscriber's address). */
+  geom: import('./types.ts').Geom | null;
 }
 export interface StructuredIssue {
   kind: 'sample' | 'weekly' | 'quiet' | 'notice';
@@ -31,7 +33,7 @@ export function buildIssue(kind: StructuredIssue['kind'], content: IssueContent,
       changeId: c.id, name: c.name, cat: c.cat, type: c.type, status: c.status, summary: c.summary, why: c.why, before: c.before, after: c.after,
       date: c.date ?? null, place: c.place, distanceMi: metersToMiles(ci.dist), partly: ci.partly, isEvent: c.isEvent || c.type === 'reminder',
       late: !!c.occurredAt && c.occurredAt < c.observedAt - 7 * DAY, occurredAt: c.occurredAt ?? null,
-      evidenceLabel: c.evidenceLabel, conflict: c.conflict, sources: c.evidenceIds.map((id) => evidence.get(id)).filter(Boolean) as EvidenceRef[],
+      evidenceLabel: c.evidenceLabel, conflict: c.conflict, geom: c.geom, sources: c.evidenceIds.map((id) => evidence.get(id)).filter(Boolean) as EvidenceRef[],
     };
   };
   return {

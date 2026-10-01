@@ -53,10 +53,16 @@ export async function requestLogin(app: App, emailRaw: string) {
 }
 
 /** Consume a magic link. Returns the account id to sign in, or an error message. */
-export async function verifyLink(app: App, token: string): Promise<{ accountId: string; created: boolean } | { error: string }> {
+export async function requestOperatorLogin(app: App, emailRaw: string) {
+  const email = emailRaw.trim().toLowerCase();
+  if (app.cfg.operatorEmails.includes(email)) await sendLink(app, email, 'login', { operator: true });
+}
+
+export async function verifyLink(app: App, token: string): Promise<{ accountId: string; created: boolean } | { operatorEmail: string } | { error: string }> {
   const now = app.clock.now();
   const m = await app.store.consumeMagicLink(sha256(token), now);
   if (!m) return { error: 'This link has expired or was already used. Request a new one.' };
+  if (m.payload?.operator) return app.cfg.operatorEmails.includes(m.email) ? { operatorEmail: m.email } : { error: 'This address is not an operator.' };
   let a = await app.store.getAccountByEmail(m.email);
   if (m.purpose === 'login' && a) return { accountId: a.id, created: false };
   const d = m.payload?.draftId ? await app.store.getDraft(m.payload.draftId) : null;

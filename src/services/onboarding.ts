@@ -12,7 +12,7 @@ import type { EvidenceRef } from '../domain/issue.ts';
 import { DAY } from '../domain/time.ts';
 import { PREVIEW_LIMITS } from '../domain/ledger.ts';
 import { newId, randomToken, sha256 } from '../lib/crypto.ts';
-import { findAddress, nearestNeighborhood, resolveIntents } from './geo.ts';
+import { findAddress, inCoverage, nearestNeighborhood, resolveIntents } from './geo.ts';
 import type { Proposal } from './geo.ts';
 
 export const DRAFT_TTL = DAY;
@@ -43,14 +43,18 @@ export async function searchAddress(app: App, d: Draft, q: string) {
 }
 
 /** Confirm a candidate (optionally with a corrected pin). Outside coverage returns `covered: false` and nothing is saved. */
-export async function confirmLocation(app: App, d: Draft, candidateId: string, adjusted?: Pt): Promise<{ covered: boolean }> {
+export async function confirmLocation(app: App, d: Draft, candidateId: string, adjusted?: Pt, radiusMi?: number): Promise<{ covered: boolean }> {
   const c = d.candidates?.find((x) => x.id === candidateId);
   if (!c) throw new UserError('Choose one of the matches.');
   if (!c.covered) return { covered: false };
+  if (adjusted && !inCoverage(app, adjusted)) throw new UserError('That pin is outside our coverage area. Move it closer to your address.');
   const point = adjusted ?? c.point;
-  const radius = d.prefs?.radiusMi ?? 1;
+  const radius = radiusMi ?? d.prefs?.radiusMi ?? 1;
   const base = defaultPrefs(point, `${c.label}, ${c.city}`, await nearestNeighborhood(app, point));
-  d.prefs = d.prefs ? { ...d.prefs, center: point, addressLabel: base.addressLabel, areaName: base.areaName } : { ...base, radiusMi: radius };
+  // A new location clears drawn shapes and any approval: they were relative to the old pin.
+  d.prefs = d.prefs ? { ...d.prefs, center: point, addressLabel: base.addressLabel, areaName: base.areaName, radiusMi: radius, inc: [], exc: [], areaMode: 'radius' } : { ...base, radiusMi: radius };
+  d.approvedPreviewId = null;
+  d.proposals = [];
   d.candidates = null;
   await app.store.saveDraft(d);
   return { covered: true };

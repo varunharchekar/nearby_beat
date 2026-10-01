@@ -138,7 +138,7 @@ test('refinement examples from the PRD', () => {
 /* ---------------- changes and evidence ---------------- */
 let n = 0;
 const id = () => `c${++n}`;
-const obs = (over: Partial<SourceObservation> & { facts?: Partial<SourceObservation['facts']> } = {}): SourceObservation => ({
+const obs = (over: Partial<Omit<SourceObservation, 'facts'>> & { facts?: Partial<SourceObservation['facts']> } = {}): SourceObservation => ({
   id: over.id ?? `o${++n}`, adapter: 'test', family: over.family ?? 'alcohol', recordId: 'R1', url: 'https://example.test/r1', title: 'Record R1',
   publishedAt: CT('2026-09-20T09:00'), observedAt: over.observedAt ?? CT('2026-09-20T10:00'), occurredAt: null, contentHash: over.contentHash ?? 'h1', sourceStatus: 'ok',
   facts: { name: 'Sable & Rye', address: '100 Test St', suite: '210', geom: { type: 'Point', coordinates: C }, cat: 'food', stage: 'filed', statusText: 'Application filed', summary: 'An application was filed.', ...(over.facts ?? {}) },

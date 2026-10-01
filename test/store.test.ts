@@ -112,3 +112,20 @@ for (const [name, make] of stores) {
     assert.equal((await s.listIssues(a.id)).length, 0);
   });
 }
+
+if (process.env.PGTEST_HOST) {
+  test('postgres: migrations apply once, in order (PostGIS migration skipped where unavailable)', async () => {
+    const { migrate } = await import('../src/store/migrate.ts');
+    const base = { host: process.env.PGTEST_HOST!, port: process.env.PGTEST_PORT ?? '5432', user: process.env.PGTEST_USER ?? 'postgres' };
+    const admin = psqlQuery({ ...base, db: 'postgres' });
+    const db = `mig_${uniq()}`;
+    await admin(`CREATE DATABASE ${db}`);
+    const q = psqlQuery({ ...base, db });
+    const skip = process.env.PGTEST_POSTGIS ? undefined : /spatial/;
+    assert.deepEqual(await migrate(q, { skip }), skip ? ['001_core.sql'] : ['001_core.sql', '002_spatial.sql']);
+    assert.deepEqual(await migrate(q, { skip }), []);
+    const tables = (await q(`SELECT count(*)::int AS n FROM information_schema.tables WHERE table_schema = 'public'`)).rows[0].n;
+    assert.ok(tables >= 18);
+    await admin(`DROP DATABASE ${db}`);
+  });
+}
