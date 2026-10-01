@@ -88,6 +88,9 @@ export function deriveChanges(prev: PrevState | null, obs: SourceObservation, en
   const nd = f.event?.text ?? f.openingDate?.text;
   if (nd && pd && pd !== nd) out.push(mk(f.event ? 'opening_event' : 'timeline', { before: pd, after: nd }));
   else if (nd && !pd && f.event) out.push(mk('opening_event'));
+  if (!out.length && f.revision && p.revision && f.revision !== p.revision) {
+    out.push(mk('status', { before: 'Earlier filing', after: `Amended: ${f.statusText}`, status: `Amended filing (${f.statusText})` }));
+  }
   return out;
 }
 

@@ -59,6 +59,8 @@ export interface ObservationFacts {
   /** Explicit evidence of closure or cancellation. A missing record is never closure. */
   closed?: boolean;
   canceled?: boolean;
+  /** Normalized text of an amendable filing (zoning case, application). A change here is an amendment. */
+  revision?: string;
 }
 
 export interface SourceObservation {
