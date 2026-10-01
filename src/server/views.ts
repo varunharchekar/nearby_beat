@@ -25,7 +25,7 @@ ${fixture ? '<div class="ribbon" role="note"><b>Fixture mode</b>Every place, rec
 <header class="top"><div class="top-in">
 <a class="brand" href="/"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="12" fill="none" stroke="currentColor" stroke-width="2.4"/><circle cx="16" cy="16" r="3.4" fill="currentColor"/><path d="M16 1v7M16 24v7M1 16h7M24 16h7" stroke="currentColor" stroke-width="2.4"/></svg>Nearby</a>
 <nav class="nav" aria-label="Main">${navLink('/start', 'flow', 'Get a sample')}${navLink(p.signedIn ? '/account' : '/login', 'account', p.signedIn ? 'My account' : 'Sign in')}</nav>
-${fixture ? '<a class="toolbtn" href="/dev">Dev tools</a>' : ''}
+${app.cfg.devTools ? '<a class="toolbtn" href="/dev">Dev tools</a>' : ''}
 </div></header>
 <main class="wrap" id="main">${p.body}</main>
 <footer class="footer"><a href="/legal/privacy">Privacy</a><a href="/legal/terms">Terms</a><a href="/status">Coverage and status</a></footer>
