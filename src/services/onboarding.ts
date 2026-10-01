@@ -2,7 +2,7 @@
 import type { App } from '../app.ts';
 import type { Prefs, Pt, Shape } from '../domain/types.ts';
 import type { Draft, Preview } from '../store/types.ts';
-import { applyOps, defaultPrefs, diffPrefs, effectiveFams, prefsKey, unavailableSelected, validatePrefs } from '../domain/prefs.ts';
+import { applyOps, defaultPrefs, diffPrefs, effectiveFams, famName, prefsKey, unavailableSelected, validatePrefs } from '../domain/prefs.ts';
 import type { DiffRow, PrefOp } from '../domain/prefs.ts';
 import { parseGeo, parseRefine } from '../domain/parse.ts';
 import { areaOf, areaSqMi, AREA_LIMIT_SQMI } from '../domain/geo.ts';
@@ -193,7 +193,7 @@ export function limitationsFor(app: App, p: Prefs, down: string[]): string[] {
   if (p.cats.includes('fitness')) out.push('Fitness and wellness businesses rarely appear in public records, so coverage depends mostly on announcements and reporting.');
   return out;
 }
-const famLabel = (f: string) => f.replace('_', ' ').replace(/^\w/, (m) => m.toUpperCase());
+const famLabel = (f: string) => famName(f);
 
 const memDaily = new Map<string, { day: string; n: number }>();
 function dailyCount(ipKey: string, now: number, inc: number) {

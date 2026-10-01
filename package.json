@@ -6,14 +6,14 @@
   "type": "module",
   "engines": { "node": ">=22.18" },
   "scripts": {
-    "start": "node src/main.ts",
+    "start": "node --env-file-if-exists=.env src/main.ts",
     "dev": "NEARBY_MODE=fixture node --watch src/main.ts",
     "test": "node --test 'test/*.test.ts'",
     "typecheck": "tsc -p tsconfig.json",
-    "migrate": "node src/cli.ts migrate",
-    "refresh": "node src/cli.ts refresh",
-    "dispatch": "node src/cli.ts dispatch",
-    "check:sources": "node src/cli.ts check-sources"
+    "migrate": "node --env-file-if-exists=.env src/cli.ts migrate",
+    "refresh": "node --env-file-if-exists=.env src/cli.ts refresh",
+    "dispatch": "node --env-file-if-exists=.env src/cli.ts dispatch",
+    "check:sources": "node --env-file-if-exists=.env src/cli.ts check-sources"
   },
   "dependencies": {
     "pg": "^8.13.0"

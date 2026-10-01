@@ -133,6 +133,7 @@ export function areaPage(app: App, d: Draft, max: number, sum: { sqMi: number; o
    <label class="opt"><input type="radio" name="mode" value="radius" ${!custom ? 'checked' : ''} data-autosubmit><b>Yes, use my radius</b></label>
    <label class="opt"><input type="radio" name="mode" value="custom" ${custom ? 'checked' : ''} data-autosubmit><b>Customize my area</b></label><button class="btn sm">Update</button></form>
   <div class="area-layout"><div class="stack-s"><div class="mapwrap">${mapSvg(a, { label: `Map of your area, about ${sum.sqMi.toFixed(1)} square miles`, proposals: d.proposals, interactive: custom ? 'draw' : null, basemap: basemap(app) })}</div>
+   ${app.cfg.geocoder.mapboxToken ? '' : '<p class="hint">Street basemap appears once MAPBOX_TOKEN is set. The outline and distances are exact either way.</p>'}
    <div class="row small muted"><span class="row" style="gap:6px"><span class="sw inc"></span>In your area</span><span class="row" style="gap:6px"><span class="sw exc"></span>Excluded</span><span class="row" style="gap:6px"><span class="sw prop"></span>Proposed, not applied</span></div>
    <div class="panel stack-s"><span class="lbl">Area summary</span><p>${p.radiusMi}-mile circle${a.inc.length ? `, ${a.inc.length} added` : ''}${a.exc.length ? `, ${a.exc.length} excluded` : ''}. About <b class="tnum">${sum.sqMi.toFixed(1)} sq mi</b>.</p>
    ${extendsBeyondRadius(a) ? '<p class="hint">Some added shapes reach beyond your radius. Those parts are included.</p>' : ''}

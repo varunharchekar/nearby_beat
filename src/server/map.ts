@@ -19,6 +19,21 @@ export function mapSvg(a: Area, o: MapOpts): string {
   let minX = -a.rM, minY = -a.rM, maxX = a.rM, maxY = a.rM;
   const grow = (p: Pt, w = 0) => { const [x, y] = pr.fwd(p); minX = Math.min(minX, x - w); minY = Math.min(minY, y - w); maxX = Math.max(maxX, x + w); maxY = Math.max(maxY, y + w); };
   const big = (s: Shape) => s.coords.some((p) => Math.abs(pr.fwd(p)[0]) > 30000 || Math.abs(pr.fwd(p)[1]) > 30000);
+  // Very large shapes (a half-plane such as "north of X") only pull the view out to their nearest edge.
+  const nearestEdge = (s: Shape): Pt | null => {
+    const xy = s.coords.map(pr.fwd);
+    let best: [number, number] | null = null, bd = Infinity;
+    for (let i = 0; i < xy.length; i++) {
+      const [ax, ay] = xy[i], [bx, by] = xy[(i + 1) % xy.length];
+      const dx = bx - ax, dy = by - ay, L = dx * dx + dy * dy;
+      const t = L ? Math.max(0, Math.min(1, -(ax * dx + ay * dy) / L)) : 0;
+      const q: [number, number] = [ax + t * dx, ay + t * dy];
+      const d = Math.hypot(q[0], q[1]);
+      if (d < bd) { bd = d; best = q; }
+    }
+    return best && bd < 15000 ? pr.inv(best[0] * 1.08, best[1] * 1.08) : null;
+  };
+  for (const s of [...a.exc, ...(o.proposals ?? []).map((p) => p.shape)]) if (big(s)) { const e = nearestEdge(s); if (e) grow(e); }
   for (const s of a.inc) if (!big(s)) for (const p of s.coords) grow(p, s.kind === 'corridor' ? s.widthM ?? 150 : 0);
   for (const p of o.proposals ?? []) if (p.mode === 'include' && !big(p.shape)) for (const q of p.shape.coords) grow(q, p.shape.widthM ?? 0);
   for (const g of o.pins ?? []) for (const q of g.type === 'Point' ? [g.coordinates] : g.coordinates) grow(q);

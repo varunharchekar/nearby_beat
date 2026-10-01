@@ -1,0 +1,13 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: nearby
+      POSTGRES_PASSWORD: nearby
+      POSTGRES_DB: nearby
+    ports:
+      - "5432:5432"
+    volumes:
+      - nearby_db:/var/lib/postgresql/data
+volumes:
+  nearby_db:
