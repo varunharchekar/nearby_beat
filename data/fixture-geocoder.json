@@ -1,0 +1,275 @@
+{
+ "note": "Fictional addresses for fixture mode.",
+ "entries": [
+  {
+   "label": "100 Sample Street",
+   "city": "Dallas, TX 75206",
+   "point": [
+    -96.77214,
+    32.805705
+   ],
+   "kind": "address",
+   "approx": false
+  },
+  {
+   "label": "2200 Demo Avenue",
+   "city": "Dallas, TX 75206",
+   "point": [
+    -96.783911,
+    32.820094
+   ],
+   "kind": "address",
+   "approx": false
+  },
+  {
+   "label": "48 Placeholder Court",
+   "city": "Dallas, TX 75214",
+   "point": [
+    -96.731478,
+    32.806604
+   ],
+   "kind": "address",
+   "approx": false
+  },
+  {
+   "label": "Greenville Ave & Mockingbird Ln",
+   "city": "Dallas, TX 75206",
+   "point": [
+    -96.77,
+    32.83898
+   ],
+   "kind": "intersection",
+   "approx": true
+  },
+  {
+   "label": "Main Street",
+   "city": "Dallas, TX 75201",
+   "point": [
+    -96.7985,
+    32.781
+   ],
+   "kind": "street",
+   "approx": true
+  },
+  {
+   "label": "Main Street",
+   "city": "Richardson, TX 75081",
+   "point": [
+    -96.73,
+    32.948
+   ],
+   "kind": "street",
+   "approx": true
+  },
+  {
+   "label": "500 Example Road",
+   "city": "Austin, TX 78701",
+   "point": [
+    -97.7431,
+    30.2672
+   ],
+   "kind": "address",
+   "approx": false
+  },
+  {
+   "label": "Knox Henderson",
+   "city": "Dallas, TX",
+   "point": [
+    -96.798891,
+    32.79941
+   ],
+   "kind": "neighborhood",
+   "approx": true,
+   "bbox": [
+    -96.816012,
+    32.791316,
+    -96.78177,
+    32.807503
+   ]
+  },
+  {
+   "label": "Lower Greenville",
+   "city": "Dallas, TX",
+   "point": [
+    -96.77,
+    32.803007
+   ],
+   "kind": "neighborhood",
+   "approx": true,
+   "bbox": [
+    -96.77749,
+    32.789517,
+    -96.76251,
+    32.816497
+   ]
+  },
+  {
+   "label": "M Streets",
+   "city": "Dallas, TX",
+   "point": [
+    -96.77,
+    32.827288
+   ],
+   "kind": "neighborhood",
+   "approx": true,
+   "bbox": [
+    -96.787121,
+    32.816497,
+    -96.752879,
+    32.83853
+   ]
+  },
+  {
+   "label": "Lakewood",
+   "city": "Dallas, TX",
+   "point": [
+    -96.727198,
+    32.807503
+   ],
+   "kind": "neighborhood",
+   "approx": true,
+   "bbox": [
+    -96.743249,
+    32.789517,
+    -96.710078,
+    32.82549
+   ]
+  },
+  {
+   "label": "Uptown",
+   "city": "Dallas, TX",
+   "point": [
+    -96.825642,
+    32.795812
+   ],
+   "kind": "neighborhood",
+   "approx": true,
+   "bbox": [
+    -96.847043,
+    32.779624,
+    -96.804241,
+    32.812
+   ]
+  },
+  {
+   "label": "Mockingbird Ln",
+   "city": "Dallas, TX",
+   "point": [
+    -96.77,
+    32.83898
+   ],
+   "kind": "street",
+   "approx": true
+  },
+  {
+   "label": "Ross Ave",
+   "city": "Dallas, TX",
+   "point": [
+    -96.77,
+    32.789517
+   ],
+   "kind": "street",
+   "approx": true
+  },
+  {
+   "label": "Lovers Ln",
+   "city": "Dallas, TX",
+   "point": [
+    -96.77,
+    32.855167
+   ],
+   "kind": "street",
+   "approx": true
+  },
+  {
+   "label": "Greenville Ave",
+   "city": "Dallas, TX",
+   "point": [
+    -96.77,
+    32.812
+   ],
+   "kind": "street",
+   "approx": true
+  },
+  {
+   "label": "Belmont Ave",
+   "city": "Dallas, TX",
+   "point": [
+    -96.77,
+    32.801208
+   ],
+   "kind": "street",
+   "approx": true
+  },
+  {
+   "label": "Skillman St",
+   "city": "Dallas, TX",
+   "point": [
+    -96.740039,
+    32.812
+   ],
+   "kind": "street",
+   "approx": true
+  },
+  {
+   "label": "Central Expy",
+   "city": "Dallas, TX",
+   "point": [
+    -96.802101,
+    32.812
+   ],
+   "kind": "street",
+   "approx": true
+  },
+  {
+   "label": "Greenville Ave & Ross Ave",
+   "city": "Dallas, TX",
+   "point": [
+    -96.77,
+    32.789517
+   ],
+   "kind": "intersection",
+   "approx": true
+  },
+  {
+   "label": "Greenville Ave & Belmont Ave",
+   "city": "Dallas, TX",
+   "point": [
+    -96.77,
+    32.801208
+   ],
+   "kind": "intersection",
+   "approx": true
+  },
+  {
+   "label": "Greenville Ave & Monticello Ave",
+   "city": "Dallas, TX",
+   "point": [
+    -96.77,
+    32.816497
+   ],
+   "kind": "intersection",
+   "approx": true
+  },
+  {
+   "label": "Greenville Ave & Mockingbird Ln",
+   "city": "Dallas, TX",
+   "point": [
+    -96.77,
+    32.83898
+   ],
+   "kind": "intersection",
+   "approx": true
+  },
+  {
+   "label": "Greenville Ave & Lovers Ln",
+   "city": "Dallas, TX",
+   "point": [
+    -96.77,
+    32.855167
+   ],
+   "kind": "intersection",
+   "approx": true
+  }
+ ]
+}

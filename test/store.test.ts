@@ -24,7 +24,7 @@ for (const [name, make] of stores) {
     const s = make();
     const id = `d_${uniq()}`;
     const prefs = defaultPrefs([-96.77, 32.82], '100 Secret St', 'Lower Greenville');
-    await s.saveDraft({ id, tokenHash: `h_${id}`, createdAt: 1, expiresAt: 1000, candidates: null, prefs, ack: false, gens: 0, currentPreviewId: null, approvedPreviewId: null, proposals: [], geoNote: null });
+    await s.saveDraft({ id, tokenHash: `h_${id}`, createdAt: 1, expiresAt: 1000, candidates: null, prefs, ack: false, gens: 0, currentPreviewId: null, approvedPreviewId: null, proposals: [], geoNote: null, clarify: null });
     assert.equal((await s.getDraftByToken(`h_${id}`))?.prefs?.addressLabel, '100 Secret St');
     const pv: Preview = { id: `p_${uniq()}`, draftId: id, accountId: null, version: 1, prefsKey: 'K', prefs, snapshotId: 'S', periodFrom: 0, periodTo: 1, status: 'ready', error: null, content: { main: [], briefs: [], total: 0 }, issue: null, down: [], cached: false, createdAt: 1, approvedAt: null, expiresAt: 1000 };
     await s.savePreview(pv);

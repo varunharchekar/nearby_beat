@@ -1,0 +1,781 @@
+{
+ "note": "FICTIONAL FIXTURES. Every business, record and story here is invented. Coordinates are near Lower Greenville in Dallas only so maps look plausible.",
+ "origin": [
+  -96.77,
+  32.812
+ ],
+ "records": [
+  {
+   "f": "company",
+   "rec": "marigold-1",
+   "day": 9,
+   "name": "Marigold Pilates",
+   "address": "Monticello Ave",
+   "suite": "4",
+   "cat": "fitness",
+   "stage": "announced",
+   "status": "Lease signed",
+   "summary": "The studio announced a signed lease and plans to open in early 2027.",
+   "why": "A new reformer studio. The timing is the company’s estimate.",
+   "opening": {
+    "day": 110,
+    "est": true,
+    "fmt": "season"
+   },
+   "geom": {
+    "type": "Point",
+    "coordinates": [
+     -96.77749,
+     32.832684
+    ]
+   },
+   "title": "Marigold Pilates expansion announcement",
+   "url": "https://example.com/fixtures/marigold-1/9"
+  },
+  {
+   "f": "permits",
+   "rec": "BP-FX-24871",
+   "day": 7,
+   "name": "Glasswork Lofts",
+   "address": "Central Expy service road",
+   "cat": "dev",
+   "stage": "construction",
+   "status": "Under construction",
+   "summary": "A building permit for 212 apartments was issued, and site work began the following week.",
+   "why": "One of the largest residential projects in the area.",
+   "geom": {
+    "type": "Point",
+    "coordinates": [
+     -96.803171,
+     32.818295
+    ]
+   },
+   "title": "Building permit BP-FX-24871",
+   "url": "https://example.com/fixtures/BP-FX-24871/7"
+  },
+  {
+   "f": "company",
+   "rec": "northgate-1",
+   "day": 10,
+   "name": "Northgate Fitness",
+   "address": "Abrams Rd",
+   "cat": "fitness",
+   "stage": "announced",
+   "status": "Announced",
+   "summary": "The gym chain announced a new location for 2027.",
+   "why": "A large gym with a pool.",
+   "geom": {
+    "type": "Point",
+    "coordinates": [
+     -96.703657,
+     32.87855
+    ]
+   },
+   "title": "Northgate Fitness press release",
+   "url": "https://example.com/fixtures/northgate-1/10"
+  },
+  {
+   "f": "zoning",
+   "rec": "Z-FX-044",
+   "day": 2,
+   "name": "Zoning case Z-FX-044",
+   "project": "Z-FX-044",
+   "address": "Lovers Ln at Greenville Ave",
+   "cat": "dev",
+   "stage": "filed",
+   "status": "Filed",
+   "summary": "A request to rezone for a 5-story mixed-use building. No hearing date yet.",
+   "why": "A proposal only. Zoning changes can take months and can be denied.",
+   "geom": {
+    "type": "Point",
+    "coordinates": [
+     -96.76037,
+     32.855617
+    ]
+   },
+   "revision": "5 stories mixed use",
+   "title": "Zoning case Z-FX-044",
+   "url": "https://example.com/fixtures/Z-FX-044/2"
+  },
+  {
+   "f": "zoning",
+   "rec": "Z-FX-044",
+   "day": 11,
+   "name": "Zoning case Z-FX-044",
+   "project": "Z-FX-044",
+   "address": "Lovers Ln at Greenville Ave",
+   "cat": "dev",
+   "stage": "filed",
+   "status": "Filed",
+   "summary": "The amended request (revision 2) cut the proposed height from 5 stories to 4. No hearing date yet.",
+   "why": "A proposal only. Zoning changes can take months and can be denied.",
+   "geom": {
+    "type": "Point",
+    "coordinates": [
+     -96.76037,
+     32.855617
+    ]
+   },
+   "revision": "4 stories mixed use",
+   "title": "Zoning case Z-FX-044, revision 2",
+   "url": "https://example.com/fixtures/Z-FX-044/11"
+  },
+  {
+   "f": "local_reporting",
+   "rec": "pinecrest-1",
+   "day": 3,
+   "name": "Pinecrest Market",
+   "address": "Mockingbird Ln east of Greenville",
+   "cat": "shops",
+   "stage": "construction",
+   "status": "Under construction",
+   "summary": "The grocery store expects to open late this year.",
+   "why": "A full grocery would be the closest one for many nearby blocks.",
+   "opening": {
+    "day": 60,
+    "est": true,
+    "fmt": "month"
+   },
+   "geom": {
+    "type": "Point",
+    "coordinates": [
+     -96.75823,
+     32.827288
+    ]
+   },
+   "title": "Business desk report (fixture outlet)",
+   "url": "https://example.com/fixtures/pinecrest-1/3"
+  },
+  {
+   "f": "local_reporting",
+   "rec": "pinecrest-1",
+   "day": 17,
+   "name": "Pinecrest Market",
+   "address": "Mockingbird Ln east of Greenville",
+   "cat": "shops",
+   "stage": "construction",
+   "status": "Opening delayed",
+   "summary": "The grocery store pushed back its expected opening, citing a delayed refrigeration install.",
+   "why": "A full grocery would be the closest one for many nearby blocks.",
+   "opening": {
+    "day": 150,
+    "est": true,
+    "fmt": "month"
+   },
+   "geom": {
+    "type": "Point",
+    "coordinates": [
+     -96.75823,
+     32.827288
+    ]
+   },
+   "title": "Business desk follow-up (fixture outlet)",
+   "url": "https://example.com/fixtures/pinecrest-1/17"
+  },
+  {
+   "f": "planning",
+   "rec": "PB-FX-0917",
+   "day": 16,
+   "name": "Willow Park playground",
+   "address": "Willow Park, Skillman St",
+   "cat": "public",
+   "stage": "approved",
+   "status": "Renovation approved",
+   "summary": "The park board approved a playground and shade structure renovation. Construction has not started.",
+   "why": "Approval sets the budget. No construction date is set.",
+   "geom": {
+    "type": "Point",
+    "coordinates": [
+     -96.742179,
+     32.807953
+    ]
+   },
+   "title": "Park board action PB-FX-0917",
+   "url": "https://example.com/fixtures/PB-FX-0917/16"
+  },
+  {
+   "f": "websites",
+   "rec": "city-prj-118",
+   "day": 14,
+   "name": "Greenville Ave sidewalk and bike lane",
+   "address": "Greenville Ave, Ross Ave to Monticello Ave",
+   "cat": "public",
+   "stage": "construction",
+   "status": "Construction started",
+   "summary": "Crews began rebuilding sidewalks and adding a protected bike lane. Expect weekday lane closures.",
+   "why": "Expect traffic changes along the main corridor until work finishes.",
+   "opening": {
+    "day": 200,
+    "est": true,
+    "fmt": "season"
+   },
+   "geom": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -96.77,
+      32.783222
+     ],
+     [
+      -96.77,
+      32.822792
+     ]
+    ]
+   },
+   "title": "City project page (fixture)",
+   "url": "https://example.com/fixtures/city-prj-118/14"
+  },
+  {
+   "f": "alcohol",
+   "rec": "AP-FX-3301",
+   "day": 18,
+   "name": "Sable & Rye",
+   "address": "Greenville Ave near Belmont",
+   "suite": "210",
+   "cat": "food",
+   "stage": "filed",
+   "status": "Alcohol permit application filed",
+   "summary": "An application was filed for a wine and beer permit at a new wine bar. An application is not an approval.",
+   "why": "An early sign of a new bar. No opening date has been announced.",
+   "geom": {
+    "type": "Point",
+    "coordinates": [
+     -96.768074,
+     32.797161
+    ]
+   },
+   "title": "Alcohol permit application AP-FX-3301",
+   "url": "https://example.com/fixtures/AP-FX-3301/18"
+  },
+  {
+   "f": "company",
+   "rec": "spoke-1",
+   "day": 19,
+   "name": "Spoke & Wheel Bicycles",
+   "address": "Monticello Ave at Greenville Ave",
+   "cat": "shops",
+   "stage": "open",
+   "status": "Open",
+   "summary": "The shop opened to customers after a summer build-out.",
+   "why": "A full-service bike shop with repairs, a block from the Greenville bike lane work.",
+   "geom": {
+    "type": "Point",
+    "coordinates": [
+     -96.77321,
+     32.817396
+    ]
+   },
+   "title": "Spoke & Wheel opening post",
+   "url": "https://example.com/fixtures/spoke-1/19"
+  },
+  {
+   "f": "company",
+   "rec": "hollowoak-1",
+   "day": 20,
+   "name": "Hollow Oak Bar",
+   "address": "Greenville Ave at Monticello",
+   "cat": "food",
+   "stage": "closed",
+   "closed": true,
+   "status": "Closed",
+   "summary": "The owners announced last night of service after nine years.",
+   "why": "A long-running bar on the main strip. The owners have not said what will replace it.",
+   "geom": {
+    "type": "Point",
+    "coordinates": [
+     -96.765185,
+     32.814248
+    ]
+   },
+   "title": "Hollow Oak Bar closing statement",
+   "url": "https://example.com/fixtures/hollowoak-1/20"
+  },
+  {
+   "f": "permits",
+   "rec": "BP-FX-25010",
+   "day": 21,
+   "name": "Ross & Abrams mixed-use",
+   "project": "BP-FX-25010",
+   "address": "Ross Ave at Skillman St",
+   "cat": "dev",
+   "stage": "filed",
+   "status": "Permit filed, not approved",
+   "summary": "A permit application was filed for a 5-story building with ground-floor retail. Filing is not approval.",
+   "why": "If approved, it would replace a surface parking lot.",
+   "geom": {
+    "type": "Point",
+    "coordinates": [
+     -96.749669,
+     32.788618
+    ]
+   },
+   "title": "Building permit application BP-FX-25010",
+   "url": "https://example.com/fixtures/BP-FX-25010/21"
+  },
+  {
+   "f": "occupancy",
+   "rec": "CO-FX-77120",
+   "day": 22,
+   "name": "Brickhouse Bakery",
+   "address": "Ross Ave at Belmont",
+   "suite": "3",
+   "cat": "food",
+   "stage": "construction",
+   "status": "Cleared to open",
+   "summary": "The city issued a certificate of occupancy. That means the space can legally open. It is not an opening date.",
+   "why": "A neighborhood bakery is close to opening.",
+   "geom": {
+    "type": "Point",
+    "coordinates": [
+     -96.77963,
+     32.795812
+    ]
+   },
+   "title": "Certificate of occupancy CO-FX-77120",
+   "url": "https://example.com/fixtures/CO-FX-77120/22"
+  },
+  {
+   "f": "company",
+   "rec": "brickhouse-1",
+   "day": 22,
+   "name": "Brickhouse Bakery",
+   "address": "Ross Ave at Belmont",
+   "suite": "3",
+   "cat": "food",
+   "stage": "construction",
+   "status": "Opening soon",
+   "summary": "The owner says the bakery will open late next month.",
+   "why": "A neighborhood bakery is close to opening.",
+   "opening": {
+    "day": 55,
+    "est": true,
+    "fmt": "late-month"
+   },
+   "geom": {
+    "type": "Point",
+    "coordinates": [
+     -96.77963,
+     32.795812
+    ]
+   },
+   "title": "Brickhouse Bakery owner statement",
+   "url": "https://example.com/fixtures/brickhouse-1/22"
+  },
+  {
+   "f": "local_reporting",
+   "rec": "brickhouse-news",
+   "day": 24,
+   "name": "Brickhouse Bakery",
+   "address": "Ross Ave at Belmont",
+   "suite": "3",
+   "cat": "food",
+   "stage": "construction",
+   "status": "Opening soon",
+   "summary": "A local report gives a specific opening day.",
+   "why": "A neighborhood bakery is close to opening.",
+   "opening": {
+    "day": 61,
+    "est": false,
+    "fmt": "day"
+   },
+   "geom": {
+    "type": "Point",
+    "coordinates": [
+     -96.77963,
+     32.795812
+    ]
+   },
+   "title": "Neighborhood food column (fixture outlet)",
+   "url": "https://example.com/fixtures/brickhouse-news/24"
+  },
+  {
+   "f": "company",
+   "rec": "lantern-1",
+   "day": 23,
+   "name": "Lantern Tortilla Co.",
+   "address": "Belmont Ave near Greenville Ave",
+   "suite": "120",
+   "cat": "food",
+   "stage": "construction",
+   "status": "Grand opening scheduled",
+   "summary": "The owners set a grand opening with a ribbon cutting at 11 am.",
+   "why": "A new tortilleria and taqueria close by.",
+   "event": {
+    "day": 39,
+    "hour": 11,
+    "kind": "grand"
+   },
+   "geom": {
+    "type": "Point",
+    "coordinates": [
+     -96.767325,
+     32.803906
+    ]
+   },
+   "title": "Lantern Tortilla Co. opening announcement",
+   "url": "https://example.com/fixtures/lantern-1/23"
+  },
+  {
+   "f": "jobs",
+   "rec": "job-88213",
+   "day": 24,
+   "name": "Tidewater Salon",
+   "address": "Henderson Ave near Greenville",
+   "cat": "shops",
+   "stage": "signal",
+   "status": "Hiring",
+   "summary": "Job postings list stylist and front-desk roles at this address. There is no confirmed tenant opening or date.",
+   "why": "Hiring can come months before an opening, or never lead to one.",
+   "geom": {
+    "type": "Point",
+    "coordinates": [
+     -96.786051,
+     32.809752
+    ]
+   },
+   "title": "Job listing (fixture)",
+   "url": "https://example.com/fixtures/job-88213/24"
+  },
+  {
+   "f": "local_reporting",
+   "rec": "kestrel-news",
+   "day": 25,
+   "name": "Kestrel Ramen",
+   "address": "Greenville Ave",
+   "suite": "110",
+   "cat": "food",
+   "stage": "announced",
+   "status": "Announced",
+   "summary": "A ramen restaurant is coming to Greenville Ave.",
+   "why": "A new restaurant on the strip.",
+   "geom": {
+    "type": "Point",
+    "coordinates": [
+     -96.77428,
+     32.809302
+    ]
+   },
+   "title": "Restaurant news roundup (fixture outlet)",
+   "url": "https://example.com/fixtures/kestrel-news/25"
+  },
+  {
+   "f": "permits",
+   "rec": "BP-FX-25190",
+   "day": 25,
+   "name": "Kestrel Ramen",
+   "address": "Greenville Ave",
+   "suite": "140",
+   "cat": "food",
+   "stage": "filed",
+   "status": "Finish-out permit filed",
+   "summary": "A permit application was filed for a restaurant finish-out.",
+   "why": "A record-based step for a new restaurant.",
+   "geom": {
+    "type": "Point",
+    "coordinates": [
+     -96.77428,
+     32.809302
+    ]
+   },
+   "title": "Building permit application BP-FX-25190",
+   "url": "https://example.com/fixtures/BP-FX-25190/25"
+  },
+  {
+   "f": "company",
+   "rec": "fieldnote-1",
+   "day": 27,
+   "name": "Fieldnote Coffee",
+   "address": "Henderson Ave",
+   "suite": "B",
+   "cat": "food",
+   "stage": "construction",
+   "status": "Soft opening announced",
+   "summary": "A soft opening is planned with limited hours.",
+   "why": "Soft openings often run short hours. Full hours have not been announced.",
+   "event": {
+    "day": 32,
+    "hour": 7,
+    "kind": "soft"
+   },
+   "geom": {
+    "type": "Point",
+    "coordinates": [
+     -96.787121,
+     32.800309
+    ]
+   },
+   "title": "Fieldnote Coffee announcement",
+   "url": "https://example.com/fixtures/fieldnote-1/27"
+  },
+  {
+   "f": "local_reporting",
+   "rec": "taqueria-blog",
+   "day": 28,
+   "name": "Unnamed taqueria on Greenville",
+   "cat": "food",
+   "stage": "announced",
+   "status": "Announced",
+   "summary": "A report mentions a new taqueria on Greenville without an address.",
+   "why": "Unlocated records never enter a personalized email.",
+   "geom": null,
+   "title": "Neighborhood blog (fixture)",
+   "url": "https://example.com/fixtures/taqueria-blog/28"
+  },
+  {
+   "f": "occupancy",
+   "rec": "CO-FX-77161",
+   "day": 28,
+   "name": "Cedar Row Hotel",
+   "address": "Cole Ave near Ross Ave",
+   "cat": "dev",
+   "stage": "construction",
+   "status": "Construction complete",
+   "summary": "A certificate of occupancy was issued for the 140-room hotel. No opening date has been announced.",
+   "why": "Construction is done, but an opening date is still pending.",
+   "geom": {
+    "type": "Point",
+    "coordinates": [
+     -96.809592,
+     32.793114
+    ]
+   },
+   "title": "Certificate of occupancy CO-FX-77161",
+   "url": "https://example.com/fixtures/CO-FX-77161/28"
+  },
+  {
+   "f": "ordinances",
+   "rec": "ORD-FX-31455",
+   "day": 29,
+   "name": "Knox streetscape funding",
+   "address": "Henderson Ave, Cole Ave to Central Expy",
+   "cat": "public",
+   "stage": "approved",
+   "status": "Funding ordinance passed",
+   "summary": "The council passed an ordinance funding wider sidewalks and new street trees. Design work comes first.",
+   "why": "Funding is approved, but construction is likely more than a year away.",
+   "geom": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -96.818152,
+      32.791316
+     ],
+     [
+      -96.802101,
+      32.796109
+     ]
+    ]
+   },
+   "title": "Ordinance ORD-FX-31455",
+   "url": "https://example.com/fixtures/ORD-FX-31455/29"
+  },
+  {
+   "f": "company",
+   "rec": "fieldnote-1",
+   "day": 32,
+   "name": "Fieldnote Coffee",
+   "address": "Henderson Ave",
+   "suite": "B",
+   "cat": "food",
+   "stage": "open",
+   "status": "Open (soft opening)",
+   "summary": "Fieldnote began its soft opening, open 7 am to 1 pm on weekdays.",
+   "why": "The full schedule is expected later.",
+   "geom": {
+    "type": "Point",
+    "coordinates": [
+     -96.787121,
+     32.800309
+    ]
+   },
+   "title": "Fieldnote Coffee update",
+   "url": "https://example.com/fixtures/fieldnote-1/32"
+  },
+  {
+   "f": "local_reporting",
+   "rec": "pecan-1",
+   "day": 35,
+   "occurred": 18,
+   "name": "Pecan Street Deli",
+   "address": "Greenville Ave near Belmont",
+   "cat": "food",
+   "stage": "closed",
+   "closed": true,
+   "status": "Closed",
+   "summary": "The deli closed weeks ago; we learned of it from a posted notice confirmed by the landlord.",
+   "why": "A late record, included once and labeled with its actual date.",
+   "geom": {
+    "type": "Point",
+    "coordinates": [
+     -96.77642,
+     32.810201
+    ]
+   },
+   "title": "Landlord leasing notice (fixture)",
+   "url": "https://example.com/fixtures/pecan-1/35"
+  },
+  {
+   "f": "alcohol",
+   "rec": "AP-FX-3301",
+   "day": 36,
+   "name": "Sable & Rye",
+   "address": "Greenville Ave near Belmont",
+   "suite": "210",
+   "cat": "food",
+   "stage": "approved",
+   "status": "Alcohol permit approved",
+   "summary": "The wine and beer permit was approved. No opening date has been announced.",
+   "why": "Approval removes one hurdle. Opening still depends on construction.",
+   "geom": {
+    "type": "Point",
+    "coordinates": [
+     -96.768074,
+     32.797161
+    ]
+   },
+   "title": "Alcohol permit AP-FX-3301 decision",
+   "url": "https://example.com/fixtures/AP-FX-3301/36"
+  },
+  {
+   "f": "permits",
+   "rec": "BP-FX-25010",
+   "day": 37,
+   "name": "Ross & Abrams mixed-use",
+   "project": "BP-FX-25010",
+   "address": "Ross Ave at Skillman St",
+   "cat": "dev",
+   "stage": "approved",
+   "status": "Permit approved",
+   "summary": "The building permit was approved. No construction start date has been set.",
+   "why": "Approval is not construction.",
+   "geom": {
+    "type": "Point",
+    "coordinates": [
+     -96.749669,
+     32.788618
+    ]
+   },
+   "title": "Building permit BP-FX-25010 approval",
+   "url": "https://example.com/fixtures/BP-FX-25010/37"
+  },
+  {
+   "f": "company",
+   "rec": "lantern-1",
+   "day": 40,
+   "name": "Lantern Tortilla Co.",
+   "address": "Belmont Ave near Greenville Ave",
+   "suite": "120",
+   "cat": "food",
+   "stage": "open",
+   "status": "Open",
+   "summary": "The tortilleria opened after its grand opening weekend.",
+   "why": "Now open daily from 7 am.",
+   "geom": {
+    "type": "Point",
+    "coordinates": [
+     -96.767325,
+     32.803906
+    ]
+   },
+   "title": "Lantern Tortilla Co. update",
+   "url": "https://example.com/fixtures/lantern-1/40"
+  },
+  {
+   "f": "websites",
+   "rec": "city-adv-552",
+   "day": 49,
+   "name": "Greenville Ave lane closure",
+   "address": "Greenville Ave, Ross Ave to Belmont Ave",
+   "cat": "public",
+   "stage": "construction",
+   "status": "Northbound lane closure",
+   "summary": "A northbound lane closure begins for about three weeks.",
+   "why": "Expect slower traffic on the main corridor.",
+   "geom": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      -96.77,
+      32.789517
+     ],
+     [
+      -96.77,
+      32.801208
+     ]
+    ]
+   },
+   "title": "City traffic advisory (fixture)",
+   "url": "https://example.com/fixtures/city-adv-552/49"
+  },
+  {
+   "f": "permits",
+   "rec": "BP-FX-25233",
+   "day": 50,
+   "name": "Marigold Pilates",
+   "address": "Monticello Ave",
+   "suite": "4",
+   "cat": "fitness",
+   "stage": "filed",
+   "status": "Finish-out permit filed",
+   "summary": "A permit application was filed for interior finish-out. Filing is not approval.",
+   "why": "The first record-based step after the lease announcement.",
+   "geom": {
+    "type": "Point",
+    "coordinates": [
+     -96.77749,
+     32.832684
+    ]
+   },
+   "title": "Building permit application BP-FX-25233",
+   "url": "https://example.com/fixtures/BP-FX-25233/50"
+  },
+  {
+   "f": "company",
+   "rec": "brickhouse-1",
+   "day": 56,
+   "name": "Brickhouse Bakery",
+   "address": "Ross Ave at Belmont",
+   "suite": "3",
+   "cat": "food",
+   "stage": "construction",
+   "status": "Opening date confirmed",
+   "summary": "The owner confirmed opening day, matching the local report.",
+   "why": "There is now one confirmed date.",
+   "opening": {
+    "day": 61,
+    "est": false,
+    "fmt": "day"
+   },
+   "geom": {
+    "type": "Point",
+    "coordinates": [
+     -96.77963,
+     32.795812
+    ]
+   },
+   "title": "Brickhouse Bakery opening post",
+   "url": "https://example.com/fixtures/brickhouse-1/56"
+  },
+  {
+   "f": "planning",
+   "rec": "PB-FX-0917",
+   "day": 63,
+   "name": "Willow Park playground",
+   "address": "Willow Park, Skillman St",
+   "cat": "public",
+   "stage": "construction",
+   "status": "Construction started",
+   "summary": "Fencing went up and demolition of the old playground began.",
+   "why": "The playground is closed during the work.",
+   "geom": {
+    "type": "Point",
+    "coordinates": [
+     -96.742179,
+     32.807953
+    ]
+   },
+   "title": "Parks department notice (fixture)",
+   "url": "https://example.com/fixtures/PB-FX-0917/63"
+  }
+ ]
+}

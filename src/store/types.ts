@@ -19,6 +19,8 @@ export interface Draft {
   /** Proposed shapes awaiting confirmation. */
   proposals: { id: string; mode: 'include' | 'exclude'; shape: import('../domain/types.ts').Shape }[];
   geoNote: string | null;
+  /** A street named without endpoints: ask which stretch before proposing anything. */
+  clarify: { mode: 'include' | 'exclude'; road: string; text: string } | null;
 }
 
 export interface Preview {

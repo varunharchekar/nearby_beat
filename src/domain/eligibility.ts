@@ -31,15 +31,22 @@ export function eligible(c: ChangeEvent, p: Prefs, w: Window, available: Set<str
 }
 
 export function buildContent(changes: ChangeEvent[], p: Prefs, w: Window, available: Set<string>, down: string[] = []): IssueContent {
+  // One story per entity per issue: keep the most relevant change (rank, then most recent).
+  const best = new Map<string, { id: string; dist: number; partly: boolean; rank: number; at: number; pri: number }>();
   const seen = new Set<string>();
-  const res = [];
   for (const c of changes) {
     if (seen.has(c.dedupeKey)) continue;
     const r = eligible(c, p, w, available, down);
-    if (r) { res.push({ ...r, rank: RANK[c.type] }); seen.add(c.dedupeKey); }
+    if (!r) continue;
+    seen.add(c.dedupeKey);
+    // A reminder only stands in for an announcement the subscriber already received in an earlier issue.
+    const cand = { ...r, rank: RANK[c.type], at: c[w.field] ?? 0, pri: RANK[c.type] + (c.type === 'reminder' ? 0.5 : 0) };
+    const cur = best.get(c.entityId);
+    if (!cur || cand.pri < cur.pri || (cand.pri === cur.pri && cand.at > cur.at)) best.set(c.entityId, cand);
   }
+  const res = [...best.values()];
   res.sort((a, b) => a.rank - b.rank || a.dist - b.dist);
   const L = LENS[p.len];
-  const strip = ({ rank, ...x }: (typeof res)[number]) => x;
+  const strip = ({ rank, at, pri, ...x }: (typeof res)[number]) => x;
   return { main: res.slice(0, L.main).map(strip), briefs: res.slice(L.main, L.main + L.brief).map(strip), total: res.length };
 }

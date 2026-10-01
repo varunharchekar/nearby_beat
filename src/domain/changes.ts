@@ -95,11 +95,17 @@ export function deriveChanges(prev: PrevState | null, obs: SourceObservation, en
 }
 
 /** Different sources giving different dates for the same entity within 45 days. */
+export function conflictingWith(recent: ChangeEvent[], c: DraftChange): ChangeEvent[] {
+  if (!c.date?.text) return [];
+  return recent.filter((r) => r.entityId === c.entityId && r.id !== c.id && r.date?.text && r.family !== c.family
+    && r.date.text !== c.date!.text && Math.abs(r.observedAt - c.observedAt) <= 45 * DAY && c.before !== r.date.text);
+}
+
 export function detectConflict(recent: ChangeEvent[], c: DraftChange): string[] | null {
   if (!c.date?.text) return null;
-  const others = recent.filter((r) => r.entityId === c.entityId && r.id !== c.id && r.date?.text
-    && r.date.text !== c.date!.text && Math.abs(r.observedAt - c.observedAt) <= 45 * DAY
-    && !(r.dedupeKey.includes(':timeline:') && r.after === c.date!.text));
+  // Only different sources can conflict; a newer report from the same source is an update (a timeline change).
+  const others = recent.filter((r) => r.entityId === c.entityId && r.id !== c.id && r.date?.text && r.family !== c.family
+    && r.date.text !== c.date!.text && Math.abs(r.observedAt - c.observedAt) <= 45 * DAY && c.before !== r.date.text);
   if (!others.length) return null;
   return [...others.map((o) => `${o.evidenceLabel} (${o.family}): ${o.date!.text}`), `${c.evidenceLabel} (${c.family}): ${c.date.text}`];
 }
