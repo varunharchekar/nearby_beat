@@ -97,9 +97,9 @@ export async function geocodeNear(app: App, address: string, center: Pt, city: s
       const r = await app.geocoder.search(q, { types: ['address', 'intersection'], proximity: center, limit: 1 });
       const hit = r.find((x) => x.kind === 'address' || x.kind === 'intersection');
       if (!hit) continue;
-      const where = `${hit.label}, ${hit.city}`.toLowerCase();
+      const where = [hit.label, hit.city, ...(hit.places ?? [])].join(', ').toLowerCase();
       // The match must be in the place the source named, not a same-named street near the user.
-      if (named.length && !named.some((n) => where.includes(n.toLowerCase())) && !named.some((n) => n.toLowerCase() === town)) continue;
+      if (named.length && !named.some((n) => where.includes(n.toLowerCase()) || city.toLowerCase().includes(n.toLowerCase()) || n.toLowerCase() === town)) continue;
       const gotState = stateOf(`x, ${hit.city}`);
       if (wantState && gotState && wantState !== gotState) continue;
       return hit.point;

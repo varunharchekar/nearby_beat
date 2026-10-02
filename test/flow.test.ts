@@ -194,3 +194,15 @@ test('recency: old openings are left out; ongoing projects need an update within
   assert.deepEqual(kept, ['New Opening', 'Slow Project']);
   assert.deepEqual(out.dropped.map((d) => d.reason), ['older than your time window', 'older than your time window']);
 });
+
+test('item placement: boroughs and neighborhoods inside a bigger city still match', async () => {
+  const center: [number, number] = [-73.95, 40.71];
+  const geocoder = { name: 'fake', async search() { return [{ label: '200 Grand St', city: 'New York, NY, 11211', places: ['Williamsburg', 'Brooklyn', 'New York'], point: center, kind: 'address' as const, approx: false }]; } };
+  const app = { geocoder } as any;
+  assert.deepEqual(await rep.geocodeNear(app, '200 Grand St, Brooklyn, NY 11211', center, 'Brooklyn, New York, NY'), center);
+  assert.deepEqual(await rep.geocodeNear(app, '200 Grand St, Williamsburg, Brooklyn, NY', center, 'Brooklyn, New York, NY'), center);
+  // Without the borough names from the provider, the user's own city string still counts.
+  const bare = { geocoder: { name: 'fake', async search() { return [{ label: '200 Grand St', city: 'New York, NY', point: center, kind: 'address' as const, approx: false }]; } } } as any;
+  assert.deepEqual(await rep.geocodeNear(bare, '200 Grand St, Brooklyn, NY', center, 'Brooklyn, New York, NY'), center);
+  assert.equal(await rep.geocodeNear(bare, '200 Grand St, Jersey City, NJ', center, 'Brooklyn, New York, NY'), null, 'other state rejected');
+});

@@ -8,6 +8,8 @@ export interface GeoResult {
   kind: 'address' | 'street' | 'intersection' | 'neighborhood' | 'place' | 'postcode';
   bbox?: [number, number, number, number];
   approx: boolean;
+  /** Every place name around the match (neighborhood, locality, borough, city, county), when the provider knows them. */
+  places?: string[];
 }
 export interface Geocoder {
   name: string;
@@ -41,7 +43,9 @@ export class MapboxGeocoder implements Geocoder {
       const kind = p.feature_type === 'street' && p.coordinates?.accuracy === 'intersection' ? 'intersection' : (p.feature_type ?? 'place');
       return {
         label: p.name_preferred ?? p.name ?? p.full_address,
-        city: [p.context?.place?.name, p.context?.region?.region_code, p.context?.postcode?.name].filter(Boolean).join(', '),
+        // Locality first: Brooklyn addresses are locality "Brooklyn" inside place "New York".
+        city: [...new Set([p.context?.locality?.name, p.context?.place?.name])].filter(Boolean).concat([p.context?.region?.region_code, p.context?.postcode?.name].filter(Boolean)).join(', '),
+        places: ['neighborhood', 'locality', 'place', 'district'].map((k) => p.context?.[k]?.name).filter(Boolean),
         point: [p.coordinates?.longitude ?? f.geometry.coordinates[0], p.coordinates?.latitude ?? f.geometry.coordinates[1]],
         kind: kind as GeoResult['kind'], bbox: p.bbox, approx: kind !== 'address',
       };
