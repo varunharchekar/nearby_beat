@@ -284,6 +284,27 @@ export function buildRouter(app: App): Router {
     sendJson(c, 200, { ok: true });
   });
 
+  // Weekly runs for the subscription service: news since the previous run.
+  r.post('/api/subscription-requests/:id/runs', async (c) => {
+    if (!handoffAuth(c)) return sendJson(c, 401, { error: 'Unauthorized' });
+    const raw = c.json?.since ?? (one(c.form.since) || null);
+    const since = raw == null || raw === '' ? null : typeof raw === 'number' ? raw : Date.parse(String(raw));
+    if (since !== null && !Number.isFinite(since)) return sendJson(c, 400, { error: '"since" must be an ISO date or epoch milliseconds.' });
+    try {
+      const rep0 = await rep.startSubscriptionRun(app, c.params.id, { since });
+      sendJson(c, 202, { reportId: rep0.id, since: new Date(rep0.since!).toISOString(), status: rep0.status, poll: `/api/subscription-reports/${rep0.id}` });
+    } catch (e) {
+      if (!(e instanceof UserError)) throw e;
+      sendJson(c, /not found/i.test(e.message) ? 404 : 400, { error: e.message });
+    }
+  });
+  r.get('/api/subscription-reports/:id', async (c) => {
+    if (!handoffAuth(c)) return sendJson(c, 401, { error: 'Unauthorized' });
+    const x = await app.store.getReport(c.params.id);
+    if (!x || !x.subscriptionId) return sendJson(c, 404, { error: 'Not found' });
+    sendJson(c, 200, { id: x.id, subscriptionId: x.subscriptionId, status: x.status, error: x.error, since: x.since ? new Date(x.since).toISOString() : null, to: x.finishedAt ? new Date(x.finishedAt).toISOString() : null, summary: x.summary, report: x.issue, dropped: x.dropped, usage: x.usage });
+  });
+
   /* ---------- operator ---------- */
   r.get('/ops/login', (c) => page(c, { title: 'Operator sign in', body: V.simplePage('Operator sign in', `<form method="post" action="/ops/login" class="stack"><div class="field"><label for="le">Email</label><input type="email" id="le" name="email" autocomplete="email" required></div><div><button class="btn primary">Email me a sign-in link</button></div></form>`) }));
   r.post('/ops/login', async (c) => { await requestOperatorLogin(app, one(c.form.email)); page(c, { title: 'Operator sign in', body: V.simplePage('Check your email', '<p>If that address is an operator, we sent a sign-in link. It works once and expires in 15 minutes.</p>') }); });

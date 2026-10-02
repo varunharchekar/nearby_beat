@@ -80,7 +80,7 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
       model: env.RESEARCH_MODEL || 'claude-sonnet-5-5',
       maxSearches: { ann: num(env.SEARCHES_ANNOUNCEMENTS, 10), bal: num(env.SEARCHES_BALANCED, 20), deep: num(env.SEARCHES_DEEP, 30) },
       minItems: num(env.MIN_ITEMS, 15),
-      lookbackDays: num(env.LOOKBACK_DAYS, 60),
+      lookbackDays: num(env.LOOKBACK_DAYS, 90),
       timeoutMs: num(env.REPORT_TIMEOUT_SECONDS, 480) * 1000,
       perVisitorPerDay: num(env.REPORTS_PER_VISITOR_PER_DAY, 3),
       perDraft: num(env.REPORTS_PER_DRAFT, 3),

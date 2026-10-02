@@ -41,6 +41,11 @@ export interface Report {
   createdAt: number;
   finishedAt: number | null;
   expiresAt: number;
+  /** Subscription runs: cover only news since this time (default: the lookback window). */
+  since?: number | null;
+  /** Subscription runs: the request this weekly report is for, and items sent in earlier issues. */
+  subscriptionId?: string | null;
+  previouslyReported?: string[];
 }
 
 /** A visitor asking to receive this report weekly. The subscription service picks these up. */
@@ -54,6 +59,10 @@ export interface SubscriptionRequest {
   status: 'pending_confirmation' | 'confirmed' | 'handed_off';
   createdAt: number;
   confirmedAt: number | null;
+  /** End of the period the latest weekly run covered; the next run starts here. */
+  coveredTo?: number | null;
+  /** Item names sent in recent issues, so repeats are only included with a new update. */
+  sentNames?: string[];
 }
 
 export interface MagicLink { tokenHash: string; email: string; purpose: string; payload: any; expiresAt: number; usedAt: number | null; createdAt: number }

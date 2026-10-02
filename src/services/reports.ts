@@ -113,7 +113,8 @@ export async function runReport(app: App, id: string): Promise<void> {
   const save = async (patch: Partial<Report>) => { Object.assign(rep, patch); await app.store.saveReport(rep); };
   const prefs = rep.prefs;
   const now = app.clock.now();
-  const from = now - app.cfg.research.lookbackDays * DAY;
+  const from = rep.since ?? now - app.cfg.research.lookbackDays * DAY;
+  const windowDays = Math.max(1, Math.round((now - from) / DAY));
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), app.cfg.research.timeoutMs);
   let lastSave = 0;
@@ -127,7 +128,7 @@ export async function runReport(app: App, id: string): Promise<void> {
       includeNotes: prefs.areaMode === 'custom' ? prefs.inc.map((s) => s.label) : [], excludeNotes: prefs.areaMode === 'custom' ? prefs.exc.map((s) => s.label) : [],
       cats: prefs.cats, evAll: prefs.evAll, depth: tier, depthLabel: depthName(prefs, app.cfg.research.sources), statusMin: prefs.statusMin,
       sources: app.cfg.research.sources, maxFetches: app.cfg.research.maxFetches, fetchMaxTokens: app.cfg.research.fetchMaxTokens,
-      maxItems: LENS[prefs.len].main + LENS[prefs.len].brief, lookbackDays: app.cfg.research.lookbackDays, today: new Date(now).toISOString().slice(0, 10),
+      maxItems: LENS[prefs.len].main + LENS[prefs.len].brief, lookbackDays: windowDays, sinceDate: new Date(from).toISOString().slice(0, 10), previouslyReported: rep.previouslyReported, today: new Date(now).toISOString().slice(0, 10),
       maxSearches: app.cfg.research.maxSearches[tier], records, minItems: app.cfg.research.minItems,
     };
     await save({ progress: { stage: 'searching', queries: [], fetched: [], note: records.length ? `${records.length} official records found in your area` : undefined } });
@@ -171,6 +172,16 @@ export async function runReport(app: App, id: string): Promise<void> {
       }
     }
     await save({ status: 'ready', summary: out.summary, issue: out.issue, dropped: out.dropped, usage: raw.usage, finishedAt: app.clock.now(), progress: { ...rep.progress, stage: 'done' } });
+    if (rep.subscriptionId) {
+      // The next weekly run starts where this one ended and knows what was already sent.
+      const sub = await app.store.getSubscriptionRequest(rep.subscriptionId);
+      if (sub) {
+        const names = [...out.issue.items, ...out.issue.briefs].map((i) => i.name);
+        sub.coveredTo = now;
+        sub.sentNames = [...new Set([...names, ...(sub.sentNames ?? [])])].slice(0, 100);
+        await app.store.saveSubscriptionRequest(sub);
+      }
+    }
     app.log('report.ready', { report: id, items: out.issue.items.length + out.issue.briefs.length, dropped: out.dropped.length, searches: raw.usage.searches, costUsd: Number(raw.usage.costUsd.toFixed(3)) });
   } catch (e) {
     const aborted = ctrl.signal.aborted;
@@ -217,6 +228,31 @@ export async function confirmSubscription(app: App, token: string): Promise<{ re
   const s = app.cfg.subscribe;
   const handoffUrl = s.url && s.handoffSecret ? `${s.url}${s.url.includes('?') ? '&' : '?'}request=${encodeURIComponent(signValue({ r: req.id, exp: Date.now() + DAY }, s.handoffSecret))}` : null;
   return { request: req, handoffUrl };
+}
+
+/**
+ * Weekly run for a confirmed subscription, called by the subscription service.
+ * Covers news since the previous run (or since the website report the reader subscribed from),
+ * unless the caller passes its own start time. Not counted against website visitor limits.
+ */
+export async function startSubscriptionRun(app: App, requestId: string, o: { since?: number | null; sync?: boolean } = {}): Promise<Report> {
+  if (!app.researcher) throw new UserError('Report generation isn’t configured (ANTHROPIC_API_KEY is missing).');
+  const sub = await app.store.getSubscriptionRequest(requestId);
+  if (!sub || sub.status === 'pending_confirmation') throw new UserError('Subscription request not found or not confirmed.');
+  const now = app.clock.now();
+  let since = o.since ?? sub.coveredTo ?? null;
+  if (since == null) { const first = await app.store.getReport(sub.reportId); since = first?.finishedAt ?? sub.confirmedAt ?? now - 7 * DAY; }
+  if (!(since < now)) throw new UserError('"since" must be in the past.');
+  since = Math.max(since, now - app.cfg.research.lookbackDays * DAY);
+  const rep: Report = {
+    id: newId('rpt'), draftId: `sub_${sub.id}`, visitorKey: `subscription:${sub.id}`, version: 1, prefsKey: prefsKey(sub.prefs), prefs: structuredClone(sub.prefs), status: 'running', error: null,
+    progress: { stage: 'records', queries: [], fetched: [] }, summary: null, issue: null, dropped: [], usage: null, researcher: app.researcher.name,
+    createdAt: now, finishedAt: null, expiresAt: now + 30 * DAY, since, subscriptionId: sub.id, previouslyReported: sub.sentNames ?? [],
+  };
+  await app.store.saveReport(rep);
+  const job = runReport(app, rep.id).catch((e) => app.log('report.crash', { report: rep.id, error: (e as Error).message.slice(0, 200) }));
+  if (o.sync) await job;
+  return (await app.store.getReport(rep.id)) ?? rep;
 }
 
 export const coverageOk = (app: App, p: Pt) => inCoverage(app, p);

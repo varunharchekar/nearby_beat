@@ -51,7 +51,7 @@ export function reportPdf(app: App, r: Report): Buffer {
   newPage(true);
   para(title, 'F2', 20, C.ink, M, width, 1.2);
   y -= 2;
-  para(`Covers ${fmtDate(st.periodFrom, st.tz)} to ${fmtDate(st.periodTo, st.tz)} and what's coming up  ·  Depth: ${st.depth}  ·  Interests: ${st.interests.join(', ')}`, 'F1', 8.5, C.muted);
+  para(`News from ${fmtDate(st.periodFrom, st.tz)} to ${fmtDate(st.periodTo, st.tz)}  ·  Depth: ${st.depth}  ·  Interests: ${st.interests.join(', ')}`, 'F1', 8.5, C.muted);
   y -= 6;
   if (r.summary) { para(r.summary, 'F1', 10.5, C.ink, M, width, 1.45); y -= 4; }
 

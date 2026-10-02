@@ -58,7 +58,7 @@ export function userPrompt(r: ResearchRequest): string {
 
 Only include places in ${r.city}. Many cities share street and neighborhood names; check the city in each source and skip results from anywhere else.
 Area: within about ${r.radiusMi} mile${r.radiusMi === 1 ? '' : 's'} of latitude ${r.center[1].toFixed(3)}, longitude ${r.center[0].toFixed(3)}.${r.includeNotes.length ? `\nAlso include: ${r.includeNotes.join('; ')}.` : ''}${r.excludeNotes.length ? `\nExclude: ${r.excludeNotes.join('; ')}.` : ''}
-Time window: changes announced, filed, started, opened or closed in the last ${r.lookbackDays} days, plus projects announced earlier that are still upcoming or under construction, and anything scheduled in the coming months. Do not include businesses that opened or closed before that window, even if an article about them is still online. Check the publish date of every source.
+Time window: only news published in the last ${r.lookbackDays} day${r.lookbackDays === 1 ? '' : 's'}${r.sinceDate ? ` (since ${r.sinceDate})` : ''}: new announcements, filings, construction starts, openings, closures, and new updates on earlier projects (a new opening date, a delay, a construction milestone). Every item needs a source published in that window. Skip anything whose latest news is older, even if the article is still online. Check the publish date of every source.${r.previouslyReported?.length ? `\nAlready sent to this reader in earlier issues. Include one of these again only if a source published in the window reports something new about it, and say what changed:\n${r.previouslyReported.map((n) => `- ${n}`).join('\n')}` : ''}
 
 Interests:
 ${catLines}

@@ -52,6 +52,9 @@ The website doesn't run subscriptions or billing. When a visitor clicks **Subscr
 1. We store a subscription request (email, consent, the report's exact filters) and email a single-use confirmation link.
 2. On confirmation the request becomes `confirmed`. If `SUBSCRIBE_URL` is set, the visitor is redirected there with `?request=<signed token>`.
 3. The subscription service reads the request with `GET /api/subscription-requests/:id` (header `Authorization: Bearer $SUBSCRIPTION_HANDOFF_SECRET`) and marks it with `POST /api/subscription-requests/:id/handed-off`.
+4. Each week the subscription service asks for a new report with `POST /api/subscription-requests/:id/runs` (same header). By default it covers news since the previous run; the first run starts where the website report ended. Pass `{"since": "2026-10-01T00:00:00Z"}` to choose the start yourself. The response has a `poll` URL (`GET /api/subscription-reports/:reportId`, same header) that returns the finished report as JSON. Items sent in earlier issues are only repeated when there's a new update. Weekly runs don't count against website visitor limits.
+
+Website reports cover news from the last `LOOKBACK_DAYS` days (default 90). Every item needs a source published inside the window.
 
 `src/domain/ledger.ts` (trial credits and entitlements) and `src/domain/billing.ts` (Stripe event handling), with their tests, are kept from the earlier design for the subscription service to reuse. The website doesn't use them.
 

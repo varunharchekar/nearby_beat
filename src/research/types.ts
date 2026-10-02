@@ -21,6 +21,10 @@ export interface ResearchRequest {
   minItems?: number;
   /** Second pass: names already found, so the research looks for different ones. */
   alreadyFound?: string[];
+  /** Start of the window as YYYY-MM-DD. */
+  sinceDate?: string;
+  /** Weekly runs: items sent in earlier issues; include again only with a new update. */
+  previouslyReported?: string[];
   /** 'articles': news and announcements only; 'all': also official records and government sites. */
   sources: 'articles' | 'all';
   maxFetches: number;

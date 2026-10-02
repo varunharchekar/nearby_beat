@@ -247,7 +247,7 @@ export function reportBody(app: App, r: Report) {
   <div class="issue-head" style="border:1px solid var(--line);border-radius:10px">
    <div class="row" style="justify-content:space-between"><span class="eyebrow">Nearby report${r.version > 1 ? ` · version ${r.version}` : ''}</span><span class="row" style="gap:8px">${st.fixture ? '<span class="stamp" style="color:var(--warn)">Fictional fixtures</span>' : ''}<a class="btn sm" href="/start/report/pdf" download>Download PDF</a></span></div>
    <h2>What's changing in your ${esc(st.areaLabel)}</h2>
-   <div class="meta"><span><b>Covers</b> ${fmtDate(st.periodFrom, st.tz)} – ${fmtDate(st.periodTo, st.tz)} and what's coming up</span><span><b>Depth</b> ${esc(st.depth)}</span><span><b>Interests</b> ${esc(st.interests.join(', '))}</span></div>
+   <div class="meta"><span><b>News from</b> ${fmtDate(st.periodFrom, st.tz)} – ${fmtDate(st.periodTo, st.tz)}</span><span><b>Depth</b> ${esc(st.depth)}</span><span><b>Interests</b> ${esc(st.interests.join(', '))}</span></div>
    ${r.summary ? `<p style="margin-top:6px">${esc(r.summary)}</p>` : ''}
   </div>
   ${!all.length ? `<div class="card stack"><h3>No verified changes found</h3><p>We didn't find anything we could verify and place inside your area. We don't fill the space with unrelated news.</p><p class="hint">Try a wider radius, more interests or deeper research below.</p></div>` : `

@@ -144,6 +144,19 @@ test('HTTP journey: address → filters → research → report → subscribe �
     assert.equal(done.status, 200);
     assert.equal((await store.getSubscriptionRequest(req.id))!.status, 'handed_off');
 
+    // Weekly run API: authenticated, returns a report to poll.
+    const auth = { authorization: 'Bearer handoff-secret-123', 'content-type': 'application/json' };
+    assert.equal((await fetch(`${base}/api/subscription-requests/${req.id}/runs`, { method: 'POST' })).status, 401);
+    assert.equal((await fetch(`${base}/api/subscription-requests/${req.id}/runs`, { method: 'POST', headers: auth, body: JSON.stringify({ since: 'not a date' }) })).status, 400);
+    const run = await fetch(`${base}/api/subscription-requests/${req.id}/runs`, { method: 'POST', headers: auth, body: JSON.stringify({ since: new Date(Date.now() - 7 * 86_400_000).toISOString() }) });
+    assert.equal(run.status, 202);
+    const rj = await run.json();
+    assert.match(rj.poll, /^\/api\/subscription-reports\/rpt_/);
+    let wr: any;
+    for (let i = 0; i < 100; i++) { wr = await (await fetch(base + rj.poll, { headers: auth })).json(); if (wr.status !== 'running') break; await new Promise((res) => setTimeout(res, 50)); }
+    assert.equal(wr.status, 'ready');
+    assert.equal((await fetch(base + rj.poll)).status, 401);
+
     // Operator console: gated; reports and requests visible without addresses or emails.
     r = await u.get('/ops');
     assert.equal(r.location, '/ops/login');

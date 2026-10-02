@@ -40,13 +40,13 @@ export async function assemble(
     tried.add(k0);
     const sources = it.sources.filter((s) => seen.has(norm(s.url)));
     if (!sources.length) { dropped.push({ name: it.name, reason: 'no source we could verify' }); continue; }
-    // Recency: finished events (opened, closed, opening events) must fall in the time window; anything else needs an update in the last year.
+    // Recency: every item needs a source dated inside the window (a few days' grace for time zones and late indexing).
     const dates = sources.flatMap((s) => [s.published, seen.get(norm(s.url))?.pageAge]).map((d) => (d ? Date.parse(d) : NaN)).filter(Number.isFinite);
     const newest = dates.length ? Math.max(...dates) : null;
     const done = it.stage === 'open' || it.stage === 'closed' || !!it.event;
     const yearOf = it.date_text?.match(/\b(20\d\d)\b/)?.[1];
     const thisYear = new Date(ctx.to).getUTCFullYear();
-    if ((done && newest !== null && newest < ctx.from - 7 * 86_400_000) || (done && yearOf && Number(yearOf) < thisYear && newest === null) || (!done && newest !== null && newest < ctx.to - 365 * 86_400_000)) {
+    if ((newest !== null && newest < ctx.from - 3 * 86_400_000) || (done && yearOf && Number(yearOf) < thisYear && newest === null)) {
       dropped.push({ name: it.name, reason: 'older than your time window' }); continue;
     }
     const key = it.name.toLowerCase().replace(/[^a-z0-9]/g, '');

@@ -181,7 +181,7 @@ test('item placement: a same-named street near the user is not accepted for anot
   assert.deepEqual(await rep.geocodeNear(app, '12 Bedford Ave', center, 'Austin, TX'), center, 'no city given: user city is assumed');
 });
 
-test('recency: old openings are left out; ongoing projects need an update within a year', async () => {
+test('recency: every item needs a source dated inside the window', async () => {
   const { assemble } = await import('../src/research/assemble.ts');
   const { defaultPrefs } = await import('../src/domain/prefs.ts');
   const now = Date.parse('2026-10-02T12:00:00Z');
@@ -191,8 +191,8 @@ test('recency: old openings are left out; ongoing projects need an update within
   const out = await assemble({ report: { summary: '', items }, seenUrls: new Map(items.map((i) => [i.sources[0].url, { title: i.name }])), usage: { searches: 0, inputTokens: 0, outputTokens: 0, costUsd: 0 } },
     p, { geocode: async () => null, from: now - 60 * 86_400_000, to: now, tz: 'America/Chicago', fixture: false, limitations: [], recordUrls: new Set(), trustCoords: true });
   const kept = [...out.issue.items, ...out.issue.briefs].map((i) => i.name).sort();
-  assert.deepEqual(kept, ['New Opening', 'Slow Project']);
-  assert.deepEqual(out.dropped.map((d) => d.reason), ['older than your time window', 'older than your time window']);
+  assert.deepEqual(kept, ['New Opening']);
+  assert.deepEqual(out.dropped.map((d) => d.reason), ['older than your time window', 'older than your time window', 'older than your time window']);
 });
 
 test('item placement: boroughs and neighborhoods inside a bigger city still match', async () => {
@@ -205,4 +205,40 @@ test('item placement: boroughs and neighborhoods inside a bigger city still matc
   const bare = { geocoder: { name: 'fake', async search() { return [{ label: '200 Grand St', city: 'New York, NY', point: center, kind: 'address' as const, approx: false }]; } } } as any;
   assert.deepEqual(await rep.geocodeNear(bare, '200 Grand St, Brooklyn, NY', center, 'Brooklyn, New York, NY'), center);
   assert.equal(await rep.geocodeNear(bare, '200 Grand St, Jersey City, NJ', center, 'Brooklyn, New York, NY'), null, 'other state rejected');
+});
+
+test('weekly subscription runs cover news since the previous run and carry what was sent', async () => {
+  const seen: { lookbackDays: number; sinceDate?: string; prev?: string[] }[] = [];
+  const src = 'https://news.example/x';
+  const r: Researcher = {
+    name: 'fixture',
+    async run(req) {
+      seen.push({ lookbackDays: req.lookbackDays, sinceDate: req.sinceDate, prev: req.previouslyReported });
+      const items = [{ name: `Cafe ${seen.length}`, category: 'food' as const, stage: 'announced' as const, status: 'Upcoming', what: 'x', address: '1 Sample Street', evidence_type: 'news_report' as const, sources: [{ url: src, published: new Date().toISOString().slice(0, 10) }], coords: [-96.77, 32.81] as [number, number] }];
+      return { report: { summary: 's', items }, seenUrls: new Map([[src, { title: 'X' }]]), usage: { searches: 1, inputTokens: 1, outputTokens: 1, costUsd: 0.01 } };
+    },
+  };
+  const { app, store, mailer } = await setup({ MIN_ITEMS: '1' }, r);
+  const d = await located(app);
+  d.prefs!.cats = ['food'];
+  const first = await rep.startReport(app, d, 'v1', { sync: true });
+  assert.equal(seen[0].lookbackDays, 90, 'website report covers 90 days');
+  await rep.requestSubscription(app, d, first.id, { email: 'a@example.com', consent: true, marketing: false });
+  await assert.rejects(rep.startSubscriptionRun(app, (await store.listSubscriptionRequests())[0].id), /not confirmed/);
+  const token = decodeURIComponent(mailer.outbox[0].text.match(/token=(\S+)/)![1]);
+  const { request } = (await rep.confirmSubscription(app, token)) as any;
+
+  app.clock.offset += 7 * 86_400_000;
+  const w1 = await rep.startSubscriptionRun(app, request.id, { sync: true });
+  const x1 = (await store.getReport(w1.id))!;
+  assert.equal(x1.status, 'ready', x1.error ?? '');
+  assert.equal(seen[1].lookbackDays, 7, 'first weekly run starts where the website report ended');
+  assert.deepEqual(seen[1].prev, []);
+  const sub = (await store.getSubscriptionRequest(request.id))!;
+  assert.ok(sub.coveredTo && sub.sentNames!.includes('Cafe 2'));
+
+  app.clock.offset += 7 * 86_400_000;
+  await rep.startSubscriptionRun(app, request.id, { sync: true });
+  assert.equal(seen[2].lookbackDays, 7, 'next run starts at the previous run');
+  assert.deepEqual(seen[2].prev, ['Cafe 2']);
 });

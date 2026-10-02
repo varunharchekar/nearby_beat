@@ -7,7 +7,7 @@ import { buildRouter } from './routes.ts';
 import { layout, simplePage } from './views.ts';
 
 /** Paths that legitimately receive cross-site POSTs (provider webhooks, one-click unsubscribe from mail clients). */
-const CROSS_SITE_OK = [/^\/api\/subscription-requests\//];
+const CROSS_SITE_OK = [/^\/api\/subscription-(requests|reports)\//];
 
 export function sameOrigin(c: Pick<Ctx, 'req'>, baseUrl: string): boolean {
   const h = c.req.headers;
