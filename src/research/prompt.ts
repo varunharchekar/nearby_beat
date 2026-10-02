@@ -78,6 +78,7 @@ When you are done researching, reply with only this JSON inside <report></report
     {
       "name": "business or project name",
       "category": "one of: ${CATS.map((c) => c.id).join(', ')}",
+      "venue": "for food only: restaurant, bar or cafe (coffee, bakery, dessert); otherwise null",
       "stage": "one of: signal, announced, filed, approved, construction, open, closed",
       "latest_update": "short status as of today, e.g. 'October 2026', 'Upcoming', 'Delayed to later this fall', 'Permit filed, not approved', 'Closed'",
       "why_it_matters": "two to four sentences a neighbor would find useful: what it replaces, who is behind it, what changed and when, size or permit value if a source gives it",
@@ -128,6 +129,7 @@ export function parseReport(text: string): RawReport {
       date_text: it.date_text ? String(it.date_text).slice(0, 80) : null, date_is_estimate: it.date_is_estimate === true,
       before: it.before ? String(it.before).slice(0, 80) : null, after: it.after ? String(it.after).slice(0, 80) : null,
       evidence_type: EVIDENCE.includes(it.evidence_type) ? it.evidence_type : 'other',
+      venue: ['restaurant', 'bar', 'cafe'].includes(it.venue) ? it.venue : null,
       sources: it.sources.filter((s: any) => s && typeof s.url === 'string').slice(0, 4).map((s: any) => ({ url: String(s.url), title: s.title ? String(s.title).slice(0, 200) : undefined, publisher: s.publisher ? String(s.publisher).slice(0, 60) : undefined, published: s.published ? String(s.published).slice(0, 20) : null })),
     });
   }

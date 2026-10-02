@@ -66,7 +66,7 @@ export async function assemble(
       changeId: `r${kept.length + 1}`, name: it.name, cat: it.category, type: isEvent ? 'opening_event' : 'announcement', status: it.status, summary: it.what, why: it.why,
       before: it.before ?? undefined, after: it.after ?? undefined, date: it.date_text ? { text: it.date_text, est: !!it.date_is_estimate } : null,
       place: it.address, distanceMi: metersToMiles(m.dist), partly: false, late: false, occurredAt: null, evidenceLabel: label, isEvent, geom,
-      conflict: undefined,
+      conflict: undefined, venue: it.venue ?? null,
       sources: sources.map((s, i) => {
         const v = seen.get(norm(s.url))!;
         const pub = s.published ? Date.parse(s.published) : NaN;

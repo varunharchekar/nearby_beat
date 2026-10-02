@@ -41,7 +41,7 @@ function client(base: string) {
     for (const sc of r.headers.getSetCookie()) { const [kv] = sc.split(';'); const i = kv.indexOf('='); const k = kv.slice(0, i), v = kv.slice(i + 1); if (/Max-Age=0/.test(sc)) jar.delete(k); else jar.set(k, v); }
     return { status: r.status, location: r.headers.get('location'), text: await r.text(), headers: r.headers };
   }
-  return { req, get: (p: string) => req('GET', p), post: (p: string, b?: Record<string, string | string[]>, o?: { sameOrigin?: boolean }) => req('POST', p, b ?? {}, o) };
+  return { req, cookie: () => [...jar].map(([k, v]) => `${k}=${v}`).join('; '), get: (p: string) => req('GET', p), post: (p: string, b?: Record<string, string | string[]>, o?: { sameOrigin?: boolean }) => req('POST', p, b ?? {}, o) };
 }
 const follow = async (c: ReturnType<typeof client>, r: Awaited<ReturnType<ReturnType<typeof client>['req']>>) => (r.status === 303 ? c.get(r.location!.replace(/^https?:\/\/[^/]+/, '')) : r);
 async function waitReport(u: ReturnType<typeof client>) {
@@ -95,6 +95,20 @@ test('HTTP journey: address → filters → research → report → subscribe �
     const other = client(base);
     const o = await other.get('/start/report');
     assert.equal(o.status, 303);
+
+    // Branded PDF download, group icons, no limitations box.
+    assert.match(r.text, /href="\/start\/report\/pdf"/);
+    assert.ok(!r.text.includes("What this report can't see"));
+    assert.match(r.text, /class="gicon"/);
+    assert.match(r.text, /id="rd-desc"[^>]*>[^<]+</, 'depth description shown');
+    const pdf = await fetch(`${base}/start/report/pdf`, { headers: { cookie: u.cookie() } });
+    assert.equal(pdf.status, 200);
+    assert.equal(pdf.headers.get('content-type'), 'application/pdf');
+    assert.match(pdf.headers.get('content-disposition')!, /attachment; filename="nearby-report-\d{4}-\d{2}-\d{2}\.pdf"/);
+    const bytes = Buffer.from(await pdf.arrayBuffer()).toString('latin1');
+    assert.ok(bytes.startsWith('%PDF-1.4') && bytes.trimEnd().endsWith('%%EOF'));
+    assert.match(bytes, /\(Nearby\) Tj/);
+    assert.match(bytes, /\/URI \(https:\/\//, 'sources are links');
 
     // No free-text feedback box; settings are changed with a form and re-run.
     assert.match(r.text, /Change and run again/);

@@ -54,6 +54,11 @@
     el.addEventListener('change', function () { el.form && el.form.requestSubmit ? el.form.requestSubmit() : el.form.submit(); });
   });
 
+  // Show the description of the selected research depth.
+  document.querySelectorAll('select[data-desc-target]').forEach(function (sel) {
+    var out = document.getElementById(sel.dataset.descTarget);
+    sel.addEventListener('change', function () { var o = sel.options[sel.selectedIndex]; if (out && o) out.textContent = o.dataset.desc || ''; });
+  });
   // Fill refinement text from suggestion chips.
   document.querySelectorAll('[data-fill]').forEach(function (b) {
     b.addEventListener('click', function () { var t = document.getElementById(b.dataset.target); if (t) { t.value = b.dataset.fill; t.focus(); } });

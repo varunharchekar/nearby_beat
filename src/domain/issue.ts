@@ -14,6 +14,8 @@ export interface IssueItem {
   occurredAt: number | null; evidenceLabel: string; conflict?: string[]; sources: EvidenceRef[]; isEvent: boolean;
   /** Public location of the business or project (never the subscriber's address). */
   geom: import('./types.ts').Geom | null;
+  /** Restaurants and drinks only: restaurant, bar or cafe. */
+  venue?: string | null;
 }
 export interface StructuredIssue {
   kind: 'sample' | 'weekly' | 'quiet' | 'notice';

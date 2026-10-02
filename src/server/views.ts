@@ -2,9 +2,10 @@
 import type { App } from '../app.ts';
 import type { Draft, GeoCandidate, Report } from '../store/types.ts';
 import type { Prefs } from '../domain/types.ts';
-import { ARTICLE_PRESETS, CAT_ORDER, CATS, catName, depthLabel, depthName, diffPrefs, effectiveFams, FAMILIES, famName, LENS, PRESETS, RADII, STATUS_OPTS, statusText, unavailableSelected } from '../domain/prefs.ts';
+import { ARTICLE_PRESETS, CATS, catName, depthLabel, depthName, diffPrefs, effectiveFams, FAMILIES, famName, LENS, PRESETS, RADII, STATUS_OPTS, statusText, unavailableSelected } from '../domain/prefs.ts';
 import type { DiffRow } from '../domain/prefs.ts';
 import { areaOf, extendsBeyondRadius } from '../domain/geo.ts';
+import { groupOf, reportSections } from '../domain/groups.ts';
 import type { IssueItem } from '../domain/issue.ts';
 import { areaLabelOf } from '../domain/issue.ts';
 import { fmtDate, fmtDateTime } from '../domain/time.ts';
@@ -113,7 +114,7 @@ export function interestsPage(d: Draft, max: number, error?: string) {
   <form method="post" action="/start/interests" class="stack">
   ${error ? `<p class="err" role="alert" id="cat-err">${esc(error)}</p>` : ''}
   <div class="row"><button class="btn sm" name="all" value="1">Select all</button><button class="btn sm" name="none" value="1">Clear all</button></div>
-  <fieldset class="grid2" style="border:0;padding:0;margin:0" ${error ? 'aria-describedby="cat-err"' : ''}><legend class="sr">Interests</legend>${CATS.map((k) => `<label class="opt"><input type="checkbox" name="cats" value="${k.id}" ${p.cats.includes(k.id) ? 'checked' : ''}><span><b>${esc(k.name)}</b><span class="hint">${esc(k.ex)}</span>${k.id === 'fitness' ? '<span class="hint" style="color:var(--warn)">Limited coverage: these businesses rarely appear in public records.</span>' : ''}</span></label>`).join('')}</fieldset>
+  <fieldset class="grid2" style="border:0;padding:0;margin:0" ${error ? 'aria-describedby="cat-err"' : ''}><legend class="sr">Interests</legend>${CATS.map((k) => `<label class="opt"><input type="checkbox" name="cats" value="${k.id}" ${p.cats.includes(k.id) ? 'checked' : ''}><span><b><span aria-hidden="true">${CAT_ICON[k.id]}</span> ${esc(k.name)}</b><span class="hint">${esc(k.ex)}</span>${k.id === 'fitness' ? '<span class="hint" style="color:var(--warn)">Limited coverage: these businesses rarely appear in public records.</span>' : ''}</span></label>`).join('')}</fieldset>
   <label class="check"><input type="checkbox" name="evAll" value="1" ${p.evAll ? 'checked' : ''}><span><b>Events across all categories</b><br><span class="hint">Off by default: you get opening events only for the business types you picked. Unrelated recurring events are always left out.</span></span></label>
   <div class="stepfoot"><a class="btn" href="/start">Back</a><button class="btn primary" name="next" value="1">Continue</button></div></form>`);
 }
@@ -222,12 +223,13 @@ export function progressPage(app: App, d: Draft, r: Report, now: number) {
 function chips(it: IssueItem) {
   return `<span class="chips" style="margin-top:6px">${it.sources.map((s) => `<a class="chip srcchip" href="${esc(s.url)}" rel="noopener noreferrer" target="_blank" title="${esc(s.title)}${Number.isFinite(s.publishedAt) ? ` · ${fmtDate(s.publishedAt)}` : ''}">${esc(s.publisher || s.title)}</a>`).join('')}</span>`;
 }
+const CAT_ICON: Record<string, string> = { food: '🍽️', shops: '🛍️', fitness: '🧘', dev: '🏗️', public: '🌳', events: '🎉' };
 const delayed = (it: IssueItem) => !!it.before || /delay|postpon|pushed back|later than/i.test(it.status);
 
 function itemRows(items: IssueItem[], startAt: number) {
   return items.map((it, i) => `<tr>
    <td class="n" data-label="#">${startAt + i}</td>
-   <td data-label="Business"><b>${esc(it.name)}</b><span class="hint block">${it.isEvent ? 'Opening event · ' : ''}${esc(it.evidenceLabel)}</span></td>
+   <td data-label="Business"><span class="gico" title="${esc(groupOf(it).name)}" aria-label="${esc(groupOf(it).name)}">${groupOf(it).icon}</span><b>${esc(it.name)}</b><span class="hint block">${it.isEvent ? 'Opening event · ' : ''}${esc(it.evidenceLabel)}</span></td>
    <td data-label="Address">${esc(it.place)}<span class="hint block tnum">≈${it.distanceMi < 0.1 ? '<0.1' : it.distanceMi.toFixed(1)} mi away</span></td>
    <td data-label="Latest update"><b>${delayed(it) ? '<span aria-label="Changed">⚠️</span> ' : ''}${esc(it.status)}</b>${it.date ? `<span class="hint block">${esc(it.date.text)}${it.date.est ? ' (estimate)' : ''}</span>` : ''}${it.before && it.after ? `<span class="hint block">Was ${esc(it.before)}, now ${esc(it.after)}</span>` : ''}</td>
    <td data-label="Why it matters">${esc(it.summary)}${it.why && it.why !== it.summary ? ` ${esc(it.why)}` : ''}${chips(it)}</td>
@@ -238,15 +240,12 @@ const table = (items: IssueItem[], startAt: number) => `<div class="tablewrap"><
 export function reportBody(app: App, r: Report) {
   const st = r.issue!;
   const all = st.items;
-  const top = all.slice(0, Math.min(5, all.length));
-  const rest = all.slice(top.length);
-  const groups = CAT_ORDER.map((id) => CATS.find((c) => c.id === id)!).map((c) => ({ c, items: rest.filter((x) => x.cat === c.id) })).filter((g) => g.items.length);
+  const { top, groups } = reportSections(all);
   const pins = all.map((i) => i.geom).filter((g): g is NonNullable<typeof g> => !!g);
-  let n = top.length + 1;
-  const sections = groups.map((g) => { const h = `<section class="stack-s"><h3>${esc(g.c.name)}</h3>${table(g.items, n)}</section>`; n += g.items.length; return h; }).join('');
+  const sections = groups.map((g) => `<section class="stack-s"><h3 class="ghead"><span class="gicon" aria-hidden="true" style="background:${g.group.color}1f">${g.group.icon}</span>${esc(g.group.name)}</h3>${table(g.items, g.startAt)}</section>`).join('');
   return `<div class="stack">
   <div class="issue-head" style="border:1px solid var(--line);border-radius:10px">
-   <div class="row" style="justify-content:space-between"><span class="eyebrow">Nearby report${r.version > 1 ? ` · version ${r.version}` : ''}</span>${st.fixture ? '<span class="stamp" style="color:var(--warn)">Fictional fixtures</span>' : ''}</div>
+   <div class="row" style="justify-content:space-between"><span class="eyebrow">Nearby report${r.version > 1 ? ` · version ${r.version}` : ''}</span><span class="row" style="gap:8px">${st.fixture ? '<span class="stamp" style="color:var(--warn)">Fictional fixtures</span>' : ''}<a class="btn sm" href="/start/report/pdf" download>Download PDF</a></span></div>
    <h2>What's changing in your ${esc(st.areaLabel)}</h2>
    <div class="meta"><span><b>Covers</b> ${fmtDate(st.periodFrom, st.tz)} – ${fmtDate(st.periodTo, st.tz)} and what's coming up</span><span><b>Depth</b> ${esc(st.depth)}</span><span><b>Interests</b> ${esc(st.interests.join(', '))}</span></div>
    ${r.summary ? `<p style="margin-top:6px">${esc(r.summary)}</p>` : ''}
@@ -256,7 +255,6 @@ export function reportBody(app: App, r: Report) {
   <section class="stack-s"><h3>🚨 Most relevant additions / updates</h3>${table(top, 1)}</section>
   ${sections}`}
   ${st.briefs.length ? `<section class="stack-s"><h3>Also on the radar</h3><ul class="briefs">${st.briefs.map((b) => `<li><b>${esc(b.name)}</b> · ${esc(b.place)}: ${esc(b.status)}. ${chips(b)}</li>`).join('')}</ul></section>` : ''}
-  ${st.limitations.length ? `<div class="note warn small"><b>What this report can't see</b><ul style="margin:4px 0 0;padding-left:18px">${st.limitations.map((l) => `<li>${esc(l)}</li>`).join('')}</ul></div>` : ''}
   ${r.dropped.length ? `<details class="box"><summary>Left out (${r.dropped.length})</summary><div><ul class="small" style="margin:0;padding-left:18px">${r.dropped.map((x) => `<li>${esc(x.name)}: ${esc(x.reason)}</li>`).join('')}</ul></div></details>` : ''}
   <p class="hint">Distances are straight-line and approximate. Every item links to its sources; check them before acting on anything.${r.usage ? ` ${r.usage.searches} searches.` : ''}</p>
   </div>`;
@@ -281,14 +279,15 @@ export function reportPage(app: App, d: Draft, r: Report, o: { error?: string; s
   const radiusOpts = p.areaMode === 'radius'
     ? `<div class="field"><label for="rr">Radius</label><select id="rr" name="radius">${RADII.map((v) => `<option value="${v}" ${v === p.radiusMi ? 'selected' : ''}>${v} mile${v === 1 ? '' : 's'}</option>`).join('')}</select></div>`
     : '<p class="hint">Custom area. <a href="/start/area">Edit the map</a> to change it.</p>';
-  const depthOpts = (['ann', 'bal', 'deep'] as const).map((t) => `<option value="${t}" ${p.preset === t ? 'selected' : ''}>${esc(app.cfg.research.sources === 'articles' ? ARTICLE_PRESETS[t].name : PRESETS[t].name)}</option>`).join('');
+  const presetOf = (t: 'ann' | 'bal' | 'deep') => (app.cfg.research.sources === 'articles' ? ARTICLE_PRESETS[t] : PRESETS[t]);
+  const depthOpts = (['ann', 'bal', 'deep'] as const).map((t) => `<option value="${t}" data-desc="${esc(presetOf(t).desc)}" ${p.preset === t ? 'selected' : ''}>${esc(presetOf(t).name)}</option>`).join('');
   const lenOpts = (Object.keys(LENS) as (keyof typeof LENS)[]).map((k) => `<option value="${k}" ${p.len === k ? 'selected' : ''}>${esc(LENS[k].name)}</option>`).join('');
   const refine = `<div class="panel stack-s" id="refine"><span class="lbl">Change and run again</span>
    <form method="post" action="/start/report" class="stack-s"><input type="hidden" name="action" value="rerun">
     <fieldset class="stack-s" style="border:0;padding:0;margin:0"><legend class="small"><b>Interests</b></legend>
-     ${CATS.map((k) => `<label class="check small"><input type="checkbox" name="cats" value="${k.id}" ${p.cats.includes(k.id) ? 'checked' : ''}><span>${esc(k.name)}</span></label>`).join('')}</fieldset>
+     ${CATS.map((k) => `<label class="check small"><input type="checkbox" name="cats" value="${k.id}" ${p.cats.includes(k.id) ? 'checked' : ''}><span><span aria-hidden="true">${CAT_ICON[k.id]}</span> ${esc(k.name)}</span></label>`).join('')}</fieldset>
     <div class="grid2" style="gap:10px">${radiusOpts}
-     <div class="field"><label for="rd">Research depth</label><select id="rd" name="preset">${depthOpts}</select></div>
+     <div class="field"><label for="rd">Research depth</label><select id="rd" name="preset" data-desc-target="rd-desc" aria-describedby="rd-desc">${depthOpts}</select><span class="hint" id="rd-desc" aria-live="polite">${esc(presetOf(p.preset).desc)}</span></div>
      <div class="field"><label for="rl">Length</label><select id="rl" name="len">${lenOpts}</select></div></div>
     <div><button class="btn primary sm">Run again</button></div></form>
    ${o.budget ? `<p class="hint">${esc(o.budget)}</p>` : ''}</div>`;

@@ -15,6 +15,7 @@ import { runJobs, schedulerTick } from '../jobs/worker.ts';
 import { one, many, redirect, Router, send, sendJson } from './html.ts';
 import type { Ctx } from './html.ts';
 import * as V from './views.ts';
+import { reportPdf } from './reportPdf.ts';
 import { devPage, opsPage } from './opsviews.ts';
 
 const UserError = ob.UserError;
@@ -218,6 +219,17 @@ export function buildRouter(app: App): Router {
     const budget = await rep.reportLimits(app, d, ipKey(c));
     page(c, { title: report.status === 'ready' ? 'Your report' : 'Report problem', body: V.reportPage(app, d, report, { ...o, budget }), nav: 'flow' }, status);
   };
+  r.get('/start/report/pdf', async (c) => withDraft(c, async (d) => {
+    const report = d.currentReportId ? await app.store.getReport(d.currentReportId) : null;
+    if (!report || report.status !== 'ready' || !report.issue) return redirect(c, '/start/report');
+    const buf = reportPdf(app, report);
+    const day = new Date(report.finishedAt ?? Date.now()).toISOString().slice(0, 10);
+    c.res.statusCode = 200;
+    c.res.setHeader('Content-Type', 'application/pdf');
+    c.res.setHeader('Content-Disposition', `attachment; filename="nearby-report-${day}.pdf"`);
+    c.res.setHeader('Content-Length', String(buf.length));
+    c.res.end(buf);
+  }));
   r.get('/start/report', async (c) => withDraft(c, (d) => reportView(c, d, { sub: c.url.searchParams.get('sent') ? { sent: true } : undefined })));
   r.post('/start/report', async (c) => withDraft(c, async (d) => {
     const f = c.form;

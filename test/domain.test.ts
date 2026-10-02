@@ -333,3 +333,28 @@ test('report priority: places people visit before development; offices last', as
   assert.ok(priorityOf('dev', 'New apartments') < priorityOf('dev', 'Office tower renovation'));
   assert.equal(priorityOf('fitness', 'Pilates studio'), priorityOf('shops', 'Boutique'));
 });
+
+test('display groups split restaurants, bars and coffee; offices separate', async () => {
+  const { groupOf } = await import('../src/domain/groups.ts');
+  assert.equal(groupOf({ cat: 'food', name: 'Corsaire', summary: 'New restaurant with a full bar.' }).id, 'restaurants');
+  assert.equal(groupOf({ cat: 'food', name: 'The Rustic Taproom' }).id, 'bars');
+  assert.equal(groupOf({ cat: 'food', name: 'Sable', summary: 'A cocktail bar from the team behind X.' }).id, 'bars');
+  assert.equal(groupOf({ cat: 'food', name: 'Ascension Coffee' }).id, 'cafes');
+  assert.equal(groupOf({ cat: 'food', name: 'Anything', venue: 'bar' }).id, 'bars');
+  assert.equal(groupOf({ cat: 'dev', name: 'Office tower' }).id, 'offices');
+  assert.equal(groupOf({ cat: 'fitness', name: 'Pilates' }).id, 'wellness');
+});
+
+test('pdf writer: valid structure, wrapping and WinAnsi text', async () => {
+  const { Pdf, wrap, toWinAnsi } = await import('../src/lib/pdf.ts');
+  assert.deepEqual(toWinAnsi('It’s 🍸 café'), [73, 116, 0x92, 115, 32, 32, 99, 97, 102, 0xe9]);
+  const lines = wrap('one two three four five six seven eight nine ten', 'F1', 10, 60);
+  assert.ok(lines.length > 2 && lines.every((l) => l.length > 0));
+  const pdf = new Pdf('T');
+  pdf.addPage(); pdf.text(10, 10, 'Hello (world)', 'F2', 12, [0, 0, 0]); pdf.link(0, 0, 10, 10, 'https://example.com');
+  const s = pdf.toBuffer().toString('latin1');
+  const xref = Number(s.match(/startxref\n(\d+)/)![1]);
+  assert.equal(s.slice(xref, xref + 4), 'xref', 'xref offset is exact');
+  for (const m of s.matchAll(/(\d{10}) 00000 n /g)) assert.match(s.slice(Number(m[1])), /^\d+ 0 obj/);
+  assert.match(s, /\(Hello \\\(world\\\)\) Tj/);
+});

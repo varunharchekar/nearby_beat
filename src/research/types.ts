@@ -48,6 +48,8 @@ export interface RawItem {
   before?: string | null;
   after?: string | null;
   evidence_type: EvidenceType;
+  /** Restaurants and drinks only: restaurant, bar or cafe. */
+  venue?: string | null;
   sources: { url: string; title?: string; publisher?: string; published?: string | null }[];
 }
 export interface RawReport { summary: string; items: RawItem[]; coverage_notes?: string[] }

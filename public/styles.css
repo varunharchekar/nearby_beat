@@ -299,3 +299,8 @@ table.report td:nth-child(4){width:16%}
   table.report td::before{content:attr(data-label);display:block;font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
   table.report td:nth-child(1)::before{display:none}
 }
+
+/* Report group icons */
+.ghead{display:flex;align-items:center;gap:10px}
+.gicon{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:10px;font-size:19px;line-height:1}
+.gico{margin-right:6px;font-size:15px}
