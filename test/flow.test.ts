@@ -135,3 +135,11 @@ test('all-sources mode includes official records', async () => {
   const x = (await store.getReport(r.id))!;
   assert.ok([...x.issue!.items, ...x.issue!.briefs].some((i) => i.evidenceLabel === 'Primary record'));
 });
+
+test('articles mode never asks to confirm source availability', async () => {
+  const { app } = await setup({ NEARBY_MODE: 'live', SESSION_SECRET: 'x'.repeat(40), ADDRESS_ENCRYPTION_KEY: '1'.repeat(64) }, null);
+  const { draft } = await ob.createDraft(app);
+  draft.prefs = (await import('../src/domain/prefs.ts')).defaultPrefs([-96.77, 32.81], '2000 Greenville Ave, Dallas, TX', 'Lower Greenville');
+  assert.deepEqual(ob.reportBlockers(app, draft), []);
+  await assert.rejects(rep.startReport(app, draft, 'v1'), /ANTHROPIC_API_KEY is missing/);
+});

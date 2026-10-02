@@ -154,8 +154,11 @@ export function reportBlockers(app: App, d: Draft): string[] {
   if (d.proposals.length) b.push('Apply or discard the proposed area changes first.');
   if (d.clarify) b.push(`Choose which stretch of ${d.clarify.road} you meant, or dismiss the question.`);
   if (areaCheck(d.prefs).over) b.push('Your area is larger than the launch limit (a 5-mile circle). Remove or shrink a shape.');
-  if (unavailableSelected(d.prefs, app.registry.available).length && !d.ack) b.push('Confirm that you want to continue with the available sources.');
-  if (!effectiveFams(d.prefs, app.registry.available).length) b.push('Turn on at least one available source.');
+  // Source families only matter when official records are in play; articles-only research ignores them.
+  if (app.cfg.research.sources === 'all') {
+    if (unavailableSelected(d.prefs, app.registry.available).length && !d.ack) b.push('Confirm that you want to continue with the available sources.');
+    if (!effectiveFams(d.prefs, app.registry.available).length) b.push('Turn on at least one available source.');
+  }
   return b;
 }
 

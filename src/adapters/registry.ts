@@ -29,7 +29,7 @@ export function buildRegistry(cfg: Config): Registry {
     return { adapters: fx, available: new Set(fx.map((a) => a.family)), reasons: Object.fromEntries(FAMILIES.filter((f) => !fx.some((a) => a.family === f.id)).map((f) => [f.id, 'No fixture data for this source.'])) };
   }
   // Articles-only research: no government feeds are read at all.
-  if (cfg.research.sources === 'articles' && cfg.research.provider === 'anthropic') return { adapters: [], available: new Set(FAMILIES.map((f) => f.id)), reasons: {} };
+  if (cfg.research.sources === 'articles') return { adapters: [], available: new Set(FAMILIES.map((f) => f.id)), reasons: {} };
   const adapters: SourceAdapter[] = [tabcApplications(), tabcLicenses(), legistarZoning(), ...cfg.rssFeeds.map(rssAdapter)];
   // Live research searches the web for every source family; the adapters add official Dallas records on top.
   if (cfg.research.provider === 'anthropic') return { adapters, available: new Set(FAMILIES.map((f) => f.id)), reasons: {} };
