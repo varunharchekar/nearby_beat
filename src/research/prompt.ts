@@ -61,6 +61,7 @@ Time window: changes announced, filed, started, opened or closed in the last ${r
 
 Interests:
 ${catLines}
+${r.cats.some((c) => ['food', 'shops', 'fitness'].includes(c)) && r.cats.includes('dev') ? 'Priority: restaurants, bars, shops and wellness businesses matter most to readers. Spend most of your searches on them and list them first. Include buildings and development only when notable (new apartments, hotels, demolitions, major renovations), keep them to about a quarter of the items, and put office building updates last.\n' : ''}
 ${r.cats.includes('events') ? (r.evAll ? 'Include opening events for any kind of business.' : 'Include opening events only for the interests above.') : 'Do not include opening events.'}
 
 Research depth: ${r.sources === 'articles' ? ARTICLE_DEPTH[r.depth] : DEPTH_GUIDE[r.depth]}

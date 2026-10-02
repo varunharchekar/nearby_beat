@@ -8,6 +8,10 @@ export const CATS: { id: Cat; name: string; ex: string }[] = [
   { id: 'public', name: 'Public spaces and infrastructure', ex: 'Parks, sidewalks, road work, transit, bike lanes' },
   { id: 'events', name: 'Openings and launch events', ex: 'Grand openings, soft openings, opening-related events' },
 ];
+/** Report priority: places people visit first, then public works, then development (offices last). */
+export const CAT_PRIORITY: Record<Cat, number> = { food: 0, shops: 0, fitness: 0, events: 0, public: 1, dev: 2 };
+export const CAT_ORDER: Cat[] = ['food', 'shops', 'fitness', 'events', 'public', 'dev'];
+export const priorityOf = (cat: Cat, text: string) => CAT_PRIORITY[cat] + (cat === 'dev' && /\boffices?\b|office (building|tower|space|campus)/i.test(text) ? 1 : 0);
 export const catName = (c: string) => CATS.find((x) => x.id === c)?.name ?? c;
 
 export type Tier = 'ann' | 'bal' | 'deep';

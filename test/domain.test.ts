@@ -325,3 +325,11 @@ test('issues validate citations and render without the home address', () => {
   const quiet = buildIssue('weekly', { main: [], briefs: [], total: 0 }, changes, evidence, P(), { from: 0, to: 1, tz: 'America/Chicago', limitations: [], fixture: false, coverageOk: 4 });
   assert.equal(quiet.kind, 'quiet');
 });
+
+test('report priority: places people visit before development; offices last', async () => {
+  const { priorityOf } = await import('../src/domain/prefs.ts');
+  assert.ok(priorityOf('food', 'New bar') < priorityOf('public', 'Sidewalk work'));
+  assert.ok(priorityOf('public', 'Sidewalk work') < priorityOf('dev', 'New apartments'));
+  assert.ok(priorityOf('dev', 'New apartments') < priorityOf('dev', 'Office tower renovation'));
+  assert.equal(priorityOf('fitness', 'Pilates studio'), priorityOf('shops', 'Boutique'));
+});

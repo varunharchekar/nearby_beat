@@ -2,7 +2,7 @@
 import type { App } from '../app.ts';
 import type { Draft, GeoCandidate, Report } from '../store/types.ts';
 import type { Prefs } from '../domain/types.ts';
-import { ARTICLE_PRESETS, CATS, catName, depthLabel, depthName, diffPrefs, effectiveFams, FAMILIES, famName, LENS, PRESETS, RADII, STATUS_OPTS, statusText, unavailableSelected } from '../domain/prefs.ts';
+import { ARTICLE_PRESETS, CAT_ORDER, CATS, catName, depthLabel, depthName, diffPrefs, effectiveFams, FAMILIES, famName, LENS, PRESETS, RADII, STATUS_OPTS, statusText, unavailableSelected } from '../domain/prefs.ts';
 import type { DiffRow } from '../domain/prefs.ts';
 import { areaOf, extendsBeyondRadius } from '../domain/geo.ts';
 import type { IssueItem } from '../domain/issue.ts';
@@ -240,7 +240,7 @@ export function reportBody(app: App, r: Report) {
   const all = st.items;
   const top = all.slice(0, Math.min(5, all.length));
   const rest = all.slice(top.length);
-  const groups = CATS.map((c) => ({ c, items: rest.filter((x) => x.cat === c.id) })).filter((g) => g.items.length);
+  const groups = CAT_ORDER.map((id) => CATS.find((c) => c.id === id)!).map((c) => ({ c, items: rest.filter((x) => x.cat === c.id) })).filter((g) => g.items.length);
   const pins = all.map((i) => i.geom).filter((g): g is NonNullable<typeof g> => !!g);
   let n = top.length + 1;
   const sections = groups.map((g) => { const h = `<section class="stack-s"><h3>${esc(g.c.name)}</h3>${table(g.items, n)}</section>`; n += g.items.length; return h; }).join('');

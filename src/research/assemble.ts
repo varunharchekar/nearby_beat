@@ -6,7 +6,7 @@ import type { Cat, Geom, Prefs, Pt } from '../domain/types.ts';
 import type { IssueItem, StructuredIssue } from '../domain/issue.ts';
 import { areaLabelOf } from '../domain/issue.ts';
 import { areaOf, matchGeom, metersToMiles } from '../domain/geo.ts';
-import { depthLabel, LENS, STAGE_RANK, catName } from '../domain/prefs.ts';
+import { depthLabel, LENS, STAGE_RANK, catName, priorityOf } from '../domain/prefs.ts';
 import type { RawItem, RawReport, ResearchResult } from './types.ts';
 
 export interface Dropped { name: string; reason: string }
@@ -29,7 +29,7 @@ export async function assemble(
   const seen = new Map([...raw.seenUrls].map(([u, v]) => [norm(u), { url: u, ...v }]));
   const area = areaOf(prefs);
   const dropped: Dropped[] = [];
-  const kept: (IssueItem & { _rank: number })[] = [];
+  const kept: (IssueItem & { _rank: number; _prio: number })[] = [];
   const names = new Set<string>();
   const statusMin = prefs.statusMin ? prefs.statusMin.split(':') : null;
 
@@ -73,11 +73,12 @@ export async function assemble(
         return { id: `s${kept.length}_${i}`, title: s.title || v.title || v.url, url: v.url, recordId: '', family: it.evidence_type, publishedAt: Number.isFinite(pub) ? pub : NaN, observedAt: ctx.to, publisher: s.publisher || publisherOf(v.url) };
       }),
       _rank: isEvent ? 0 : it.before ? 1 : RANK[it.stage] ?? 3,
+      _prio: isEvent ? 0 : priorityOf(it.category as Cat, `${it.name} ${it.what}`),
     });
   }
-  kept.sort((a, b) => a._rank - b._rank || a.distanceMi - b.distanceMi);
+  kept.sort((a, b) => a._prio - b._prio || a._rank - b._rank || a.distanceMi - b.distanceMi);
   const L = LENS[prefs.len];
-  const strip = ({ _rank, ...x }: (typeof kept)[number]) => x;
+  const strip = ({ _rank, _prio, ...x }: (typeof kept)[number]) => x;
   const limitations = [...ctx.limitations, ...(raw.report.coverage_notes ?? [])];
   const notLocated = dropped.filter((d) => d.reason === 'location could not be confirmed').length;
   if (notLocated) limitations.push(`${notLocated} item${notLocated === 1 ? ' was' : 's were'} left out because we couldn't place ${notLocated === 1 ? 'it' : 'them'} on the map.`);
