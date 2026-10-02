@@ -2,7 +2,7 @@
 import type { App } from '../app.ts';
 import type { Prefs, Pt } from '../domain/types.ts';
 import type { Draft, Report, SubscriptionRequest } from '../store/types.ts';
-import { depthLabel, LENS, prefsKey } from '../domain/prefs.ts';
+import { depthName, LENS, prefsKey } from '../domain/prefs.ts';
 import { areaOf, matchGeom } from '../domain/geo.ts';
 import { DAY, MIN } from '../domain/time.ts';
 import { newId, randomToken, sha256, signValue } from '../lib/crypto.ts';
@@ -12,10 +12,7 @@ import { downFamilies, reportBlockers, UserError } from './onboarding.ts';
 import { inCoverage } from './geo.ts';
 
 export const REPORT_REUSE_WINDOW = 6 * 3600_000;
-const tierOf = (p: Prefs): 'ann' | 'bal' | 'deep' => {
-  const l = depthLabel(p);
-  return l === 'Announcements' ? 'ann' : l === 'Deep research' ? 'deep' : l === 'Balanced research' ? 'bal' : p.preset;
-};
+const tierOf = (p: Prefs): 'ann' | 'bal' | 'deep' => p.preset;
 const dayStart = (now: number) => now - (now % DAY);
 
 /** Why a report can't start right now, if anything. */
@@ -86,13 +83,15 @@ export async function runReport(app: App, id: string): Promise<void> {
   const timer = setTimeout(() => ctrl.abort(), app.cfg.research.timeoutMs);
   let lastSave = 0;
   try {
-    const records = await recordsFor(app, prefs, from);
+    const articles = app.cfg.research.sources === 'articles';
+    const records = articles ? [] : await recordsFor(app, prefs, from);
     const tier = tierOf(prefs);
     const city = prefs.addressLabel.split(',').slice(1).join(',').replace(/\b\d{5}(-\d{4})?\b/, '').trim() || prefs.areaName;
     const req: ResearchRequest = {
       areaName: prefs.areaName === 'your address' ? city : prefs.areaName, city, center: prefs.center, radiusMi: prefs.radiusMi,
       includeNotes: prefs.areaMode === 'custom' ? prefs.inc.map((s) => s.label) : [], excludeNotes: prefs.areaMode === 'custom' ? prefs.exc.map((s) => s.label) : [],
-      cats: prefs.cats, evAll: prefs.evAll, depth: tier, depthLabel: depthLabel(prefs), statusMin: prefs.statusMin,
+      cats: prefs.cats, evAll: prefs.evAll, depth: tier, depthLabel: depthName(prefs, app.cfg.research.sources), statusMin: prefs.statusMin,
+      sources: app.cfg.research.sources, maxFetches: app.cfg.research.maxFetches, fetchMaxTokens: app.cfg.research.fetchMaxTokens,
       maxItems: LENS[prefs.len].main + LENS[prefs.len].brief, lookbackDays: app.cfg.research.lookbackDays, today: new Date(now).toISOString().slice(0, 10),
       maxSearches: app.cfg.research.maxSearches[tier], records,
     };
@@ -106,12 +105,13 @@ export async function runReport(app: App, id: string): Promise<void> {
     await save({ progress: { ...rep.progress, stage: 'placing' } });
     const down = await downFamilies(app);
     const limitations: string[] = [];
-    if (!records.length && tier !== 'ann') limitations.push('No official permit or license feed covers this area yet, so findings come from web sources.');
+    if (articles) limitations.push('This report is based on recent news articles and business announcements. It does not check permit, zoning or other government records, so early-stage projects may be missing.');
+    else if (!records.length && tier !== 'ann') limitations.push('No official permit or license feed covers this area yet, so findings come from web sources.');
     for (const f of down) limitations.push(`The ${f.replace('_', ' ')} feed failed to refresh, so some official records may be missing.`);
-    if (prefs.cats.includes('fitness')) limitations.push('Fitness and wellness businesses rarely appear in public records, so they depend on announcements and reporting.');
+    if (!articles && prefs.cats.includes('fitness')) limitations.push('Fitness and wellness businesses rarely appear in public records, so they depend on announcements and reporting.');
     const out = await assemble(raw, prefs, {
       geocode: (a) => geocodeNear(app, a, prefs.center), from, to: now, tz: app.cfg.tz, fixture: app.cfg.mode === 'fixture',
-      limitations, recordUrls: new Set(records.map((r) => r.url)), trustCoords: app.researcher!.name === 'fixture',
+      limitations, recordUrls: new Set(records.map((r) => r.url)), trustCoords: app.researcher!.name === 'fixture', depthName: depthName(prefs, app.cfg.research.sources),
     });
     await save({ status: 'ready', summary: out.summary, issue: out.issue, dropped: out.dropped, usage: raw.usage, finishedAt: app.clock.now(), progress: { ...rep.progress, stage: 'done' } });
     app.log('report.ready', { report: id, items: out.issue.items.length + out.issue.briefs.length, dropped: out.dropped.length, searches: raw.usage.searches, costUsd: Number(raw.usage.costUsd.toFixed(3)) });

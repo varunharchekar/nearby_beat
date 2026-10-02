@@ -3,7 +3,7 @@
  * Docs: platform.claude.com/docs/en/agents-and-tools/tool-use/web-search-tool and .../web-fetch-tool
  */
 import type { Progress, ResearchRequest, ResearchResult, Researcher, Usage } from './types.ts';
-import { parseReport, systemPrompt, userPrompt } from './prompt.ts';
+import { parseReport, RECORD_DOMAINS, systemPrompt, userPrompt } from './prompt.ts';
 
 /** USD per million tokens [input, output]. Unknown models fall back to Sonnet pricing. */
 const PRICES: Record<string, [number, number]> = {
@@ -120,9 +120,11 @@ export class AnthropicResearcher implements Researcher {
     const seenUrls: ResearchResult['seenUrls'] = new Map(req.records.map((r) => [r.url, { title: r.title }]));
     const progress: Progress = { stage: 'searching', queries: [], fetched: [] };
     onProgress({ ...progress });
+    const articles = req.sources === 'articles';
+    const blocked = articles ? { blocked_domains: RECORD_DOMAINS } : {};
     const tools = [
-      { type: 'web_search_20250305', name: 'web_search', max_uses: req.maxSearches, user_location: { type: 'approximate', city: req.city.split(',')[0], country: 'US' } },
-      { type: 'web_fetch_20250910', name: 'web_fetch', max_uses: req.maxSearches, max_content_tokens: 20_000 },
+      { type: 'web_search_20250305', name: 'web_search', max_uses: req.maxSearches, user_location: { type: 'approximate', city: req.city.split(',')[0], country: 'US' }, ...blocked },
+      ...(req.maxFetches > 0 ? [{ type: 'web_fetch_20250910', name: 'web_fetch', max_uses: req.maxFetches, max_content_tokens: req.fetchMaxTokens, ...blocked }] : []),
     ];
     const messages: { role: 'user' | 'assistant'; content: any }[] = [{ role: 'user', content: userPrompt(req) }];
     const usage = { input: 0, output: 0, searches: 0 };
@@ -138,7 +140,7 @@ export class AnthropicResearcher implements Researcher {
       if (b.type === 'text' && Array.isArray(b.citations)) for (const c of b.citations) if (c.url && !seenUrls.has(c.url)) seenUrls.set(c.url, { title: c.title ?? c.url });
     };
     for (let turn = 0; turn < 12; turn++) {
-      const r = await this.call({ model: this.model, max_tokens: 16_000, system: systemPrompt(), messages, tools, stream: true }, signal);
+      const r = await this.call({ model: this.model, max_tokens: 16_000, system: systemPrompt(req.sources), messages, tools, stream: true }, signal);
       const m = await readStream(r.body!, onBlock);
       usage.input += m.usage.input; usage.output += m.usage.output; usage.searches += m.usage.searches;
       text = m.content.filter((b) => b.type === 'text').map((b) => b.text).join('');

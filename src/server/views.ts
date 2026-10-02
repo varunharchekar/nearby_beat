@@ -2,7 +2,7 @@
 import type { App } from '../app.ts';
 import type { Draft, GeoCandidate, Report } from '../store/types.ts';
 import type { Prefs } from '../domain/types.ts';
-import { CATS, catName, depthLabel, diffPrefs, effectiveFams, FAMILIES, famName, LENS, PRESETS, RADII, STATUS_OPTS, statusText, unavailableSelected } from '../domain/prefs.ts';
+import { ARTICLE_PRESETS, CATS, catName, depthLabel, depthName, diffPrefs, effectiveFams, FAMILIES, famName, LENS, PRESETS, RADII, STATUS_OPTS, statusText, unavailableSelected } from '../domain/prefs.ts';
 import type { DiffRow } from '../domain/prefs.ts';
 import { areaOf, extendsBeyondRadius } from '../domain/geo.ts';
 import type { IssueItem } from '../domain/issue.ts';
@@ -158,6 +158,18 @@ export function areaPage(app: App, d: Draft, max: number, sum: { sqMi: number; o
 
 export function depthPage(app: App, d: Draft, max: number, error?: string) {
   const p = d.prefs!;
+  if (app.cfg.research.sources === 'articles') {
+    const n = app.cfg.research.maxSearches;
+    return flow(4, max, `${head(4, 'How far should we dig?', 'We search recent local news, blogs and business announcements. More searches can find more, but they take longer.')}
+  ${errBox(error)}
+  <form method="post" action="/start/depth" class="stack">
+  <fieldset class="grid3" style="border:0;padding:0;margin:0"><legend class="sr">Research depth</legend>${(['ann', 'bal', 'deep'] as const).map((k) => `<label class="opt"><input type="radio" name="preset" value="${k}" ${p.preset === k ? 'checked' : ''}><span><b>${ARTICLE_PRESETS[k].name}${k === 'bal' ? ' <span class="pill">Recommended</span>' : ''}</b><span class="hint">${esc(ARTICLE_PRESETS[k].desc)} Up to ${n[k]} searches.</span></span></label>`).join('')}</fieldset>
+  <div class="note small">Reports are based on articles and announcements. They don't check permit, zoning or other government records.</div>
+  <fieldset class="stack-s" style="border:0;padding:0;margin:0"><legend class="lbl" style="margin-bottom:6px">Report length</legend><p class="hint">Every item keeps its source, even in Brief.</p>
+  <div class="row">${Object.entries(LENS).map(([k, v]) => `<label class="opt" style="padding:8px 12px"><input type="radio" name="len" value="${k}" ${p.len === k ? 'checked' : ''}><span><b>${v.name}</b><span class="hint">Up to ${v.main} items${v.brief ? ` + ${v.brief} brief` : ''}</span></span></label>`).join('')}</div></fieldset>
+  <div class="stepfoot"><a class="btn" href="/start/area">Back</a><div class="btnrow"><button class="btn" name="save" value="1">Save</button><button class="btn primary" name="next" value="1">Run my report</button></div></div>
+  <p class="hint">Research takes about 3 to 5 minutes. You can leave the page and come back.</p></form>`);
+  }
   const lab = depthLabel(p);
   const un = unavailableSelected(p, app.registry.available);
   return flow(4, max, `${head(4, 'How far should we dig?', 'Depth changes which kinds of sources we search and how many searches we run. It does not promise more stories or more certainty.')}
@@ -179,7 +191,7 @@ export function depthPage(app: App, d: Draft, max: number, error?: string) {
 export const diffTable = (rows: DiffRow[]) => `<div class="tablewrap"><table class="diff"><thead><tr><th>Setting</th><th>Now</th><th>Proposed</th></tr></thead><tbody>${rows.map((r) => `<tr><td>${esc(r[0])}</td><td class="from">${esc(r[1])}</td><td class="to">${esc(r[2])}</td></tr>`).join('')}</tbody></table></div>`;
 
 export function prefSummary(app: App, p: Prefs) {
-  return `<dl class="kv small"><dt>Area</dt><dd>${esc(areaLabelOf(p))}${p.areaMode === 'custom' ? ` · ${p.inc.length} added, ${p.exc.length} excluded` : ''}</dd><dt>Interests</dt><dd>${esc(p.cats.map(catName).join(', '))}${p.evAll ? ' · events across all categories' : ''}</dd><dt>Depth</dt><dd>${esc(depthLabel(p))} (${effectiveFams(p, app.registry.available).length} working sources)</dd><dt>Length</dt><dd>${LENS[p.len].name}</dd>${p.statusMin ? `<dt>Minimum status</dt><dd>${esc(statusText(p.statusMin))}</dd>` : ''}<dt>Schedule</dt><dd>Sundays, 9:00 am Central</dd></dl>`;
+  return `<dl class="kv small"><dt>Area</dt><dd>${esc(areaLabelOf(p))}${p.areaMode === 'custom' ? ` · ${p.inc.length} added, ${p.exc.length} excluded` : ''}</dd><dt>Interests</dt><dd>${esc(p.cats.map(catName).join(', '))}${p.evAll ? ' · events across all categories' : ''}</dd><dt>Depth</dt><dd>${esc(depthName(p, app.cfg.research.sources))}</dd><dt>Length</dt><dd>${LENS[p.len].name}</dd>${p.statusMin ? `<dt>Minimum status</dt><dd>${esc(statusText(p.statusMin))}</dd>` : ''}<dt>Schedule</dt><dd>Sundays, 9:00 am Central</dd></dl>`;
 }
 
 export const simplePage = (title: string, body: string) => `<div class="card stack" style="max-width:620px"><h2>${esc(title)}</h2>${body}</div>`;
@@ -275,7 +287,7 @@ export function reportPage(app: App, d: Draft, r: Report, o: { error?: string; p
    <div class="btnrow"><a class="btn sm" href="/start/interests">Interests</a><a class="btn sm" href="/start/area">Area</a><a class="btn sm" href="/start/depth">Depth and length</a></div>
    ${o.budget ? `<p class="hint">${esc(o.budget)}</p>` : ''}</div>`;
   return flow(5, 5, `${errBox(o.error)}
-  ${stale ? `<div class="note warn stack-s"><p><b>Your settings changed since this report.</b> Run it again to see them.</p>${diffTable(diffPrefs(r.prefs, p))}<form method="post" action="/start/report"><input type="hidden" name="action" value="run"><button class="btn primary sm">Research again</button></form></div>` : ''}
+  ${stale ? `<div class="note warn stack-s"><p><b>Your settings changed since this report.</b> Run it again to see them.</p>${diffTable(diffPrefs(r.prefs, p, app.cfg.research.sources))}<form method="post" action="/start/report"><input type="hidden" name="action" value="run"><button class="btn primary sm">Research again</button></form></div>` : ''}
   ${main}
   <div class="grid2">${subscribe}${refine}</div>`);
 }
@@ -289,7 +301,7 @@ export function statusPage(app: App) {
   const blockers = configBlockers(app.cfg);
   const r = app.cfg.research;
   return `<div class="stack" style="max-width:980px"><div class="stack-s"><span class="eyebrow">Sources and status</span><h2>How reports are researched</h2>
-  <p class="muted" style="max-width:70ch">Each report runs live research with ${app.cfg.mode === 'fixture' ? 'a simulated researcher over fictional fixtures' : `Claude (${esc(r.model)}) using web search and web fetch`}: up to ${r.maxSearches.ann}, ${r.maxSearches.bal} or ${r.maxSearches.deep} searches for Announcements, Balanced and Deep research. Items are kept only when the cited source was actually seen during the research and the address can be placed inside your area.</p></div>
-  <div class="panel stack-s"><h3>Official record feeds</h3><p class="small muted">These are read before the web research and handed to it as primary records. They cover Dallas only.</p><div class="tablewrap"><table class="data"><thead><tr><th>Feed</th><th>Source</th></tr></thead><tbody>${app.registry.adapters.map((a) => `<tr><td>${esc(a.name)}</td><td class="small">${esc(a.source)}</td></tr>`).join('')}</tbody></table></div></div>
+  <p class="muted" style="max-width:70ch">Each report runs live research with ${app.cfg.mode === 'fixture' ? 'a simulated researcher over fictional fixtures' : `Claude (${esc(r.model)}) using web search and web fetch`}: up to ${r.maxSearches.ann}, ${r.maxSearches.bal} or ${r.maxSearches.deep} searches depending on depth${r.sources === 'articles' ? `, and up to ${r.maxFetches} page reads. Sources are limited to recent news articles, blogs and business announcements; government and records websites are excluded` : ''}. Items are kept only when the cited source was actually seen during the research and the address can be placed inside your area.</p></div>
+  ${r.sources === 'articles' ? '' : `<div class="panel stack-s"><h3>Official record feeds</h3><p class="small muted">These are read before the web research and handed to it as primary records. They cover Dallas only.</p><div class="tablewrap"><table class="data"><thead><tr><th>Feed</th><th>Source</th></tr></thead><tbody>${app.registry.adapters.map((a) => `<tr><td>${esc(a.name)}</td><td class="small">${esc(a.source)}</td></tr>`).join('')}</tbody></table></div></div>`}
   <div class="panel stack-s"><h3>Blocked until configured</h3>${blockers.length ? `<div class="tablewrap"><table class="data"><thead><tr><th>Feature</th><th>Needs</th><th>Until then</th></tr></thead><tbody>${blockers.map((b) => `<tr><td>${esc(b.feature)}</td><td class="mono small">${esc(b.missing.join(', '))}</td><td class="small">${esc(b.effect)}</td></tr>`).join('')}</tbody></table></div>` : '<p>Nothing blocked.</p>'}</div></div>`;
 }

@@ -17,6 +17,11 @@ export interface Config {
   email: { provider: 'console' | 'resend'; apiKey: string | null; from: string | null };
   research: {
     provider: 'fixture' | 'anthropic' | 'none';
+    /** 'articles': recent news and announcements only (cheapest). 'all': also official records and government sites. */
+    sources: 'articles' | 'all';
+    /** Page fetches allowed per report, and the size cap per fetched page. */
+    maxFetches: number;
+    fetchMaxTokens: number;
     apiKey: string | null;
     model: string;
     /** Web searches allowed per report, by research depth. */
@@ -65,6 +70,9 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
     email: { provider: env.RESEND_API_KEY && mode === 'live' ? 'resend' : 'console', apiKey: env.RESEND_API_KEY || null, from: env.EMAIL_FROM || null },
     research: {
       provider: mode === 'fixture' ? 'fixture' : apiKey ? 'anthropic' : 'none',
+      sources: env.RESEARCH_SOURCES === 'all' ? 'all' : 'articles',
+      maxFetches: num(env.FETCHES_PER_REPORT, 5),
+      fetchMaxTokens: num(env.FETCH_MAX_TOKENS, 6000),
       apiKey,
       model: env.RESEARCH_MODEL || 'claude-sonnet-5-5',
       maxSearches: { ann: num(env.SEARCHES_ANNOUNCEMENTS, 10), bal: num(env.SEARCHES_BALANCED, 20), deep: num(env.SEARCHES_DEEP, 30) },

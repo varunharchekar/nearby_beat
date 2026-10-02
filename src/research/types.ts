@@ -17,6 +17,10 @@ export interface ResearchRequest {
   lookbackDays: number;
   today: string;
   maxSearches: number;
+  /** 'articles': news and announcements only; 'all': also official records and government sites. */
+  sources: 'articles' | 'all';
+  maxFetches: number;
+  fetchMaxTokens: number;
   /** Official records already matched to the area (Dallas adapters). */
   records: OfficialRecord[];
 }

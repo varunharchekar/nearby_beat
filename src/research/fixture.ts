@@ -30,7 +30,8 @@ export class FixtureResearcher implements Researcher {
     const obs = new Map(observations.map((o) => [o.id, o]));
     const seenUrls: ResearchResult['seenUrls'] = new Map();
     const latest = new Map<string, ChangeEvent>();
-    for (const c of changes.sort((a, b) => a.observedAt - b.observedAt)) if (c.type !== 'reminder') latest.set(c.entityId, c);
+    const articleFams = new Set(['local_reporting', 'company', 'websites', 'jobs']);
+    for (const c of changes.sort((a, b) => a.observedAt - b.observedAt)) if (c.type !== 'reminder' && (req.sources === 'all' || articleFams.has(c.family))) latest.set(c.entityId, c);
     const items: RawItem[] = [];
     for (const c of latest.values()) {
       const src = c.evidenceIds.map((id) => obs.get(id)).filter(Boolean) as SourceObservation[];

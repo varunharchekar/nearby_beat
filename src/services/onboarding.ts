@@ -199,7 +199,7 @@ export async function planRefinement(app: App, prefs: Prefs, text: string): Prom
     if (res.fails.length) notes.push(`Couldn't place: ${res.fails.join('; ')}.`);
   }
   if (!ops.length && !clarify) return { ops: [], diff: [], clarify: null, message: notes.join(' ') || "We couldn't turn that into a settings change. Try a suggestion, or edit settings directly." };
-  return { ops, diff: diffPrefs(prefs, applyOps(prefs, ops)), clarify: clarify && clarify.opts.length ? clarify : null, message: notes.join(' ') || null };
+  return { ops, diff: diffPrefs(prefs, applyOps(prefs, ops), app.cfg.research.sources), clarify: clarify && clarify.opts.length ? clarify : null, message: notes.join(' ') || null };
 }
 
 export async function applyRefinement(app: App, d: Draft, ops: PrefOp[]) {

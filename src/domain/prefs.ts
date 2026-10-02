@@ -34,6 +34,16 @@ export const PRESETS: Record<Tier, { name: string; tiers: Tier[]; desc: string }
   bal: { name: 'Balanced research', tiers: ['ann', 'bal'], desc: 'Adds building permits, occupancy records, and business and alcohol registrations where supported. Earlier signals, each labeled by evidence.' },
   deep: { name: 'Deep research', tiers: ['ann', 'bal', 'deep'], desc: 'Adds planning applications, zoning cases, ordinances, agendas and amendments. Proposed changes with longer lead times.' },
 };
+/** Depth choices when research uses articles only: depth sets how many searches run. */
+export const ARTICLE_PRESETS: Record<Tier, { name: string; desc: string }> = {
+  ann: { name: 'Quick scan', desc: 'A fast pass over recent local news and business announcements.' },
+  bal: { name: 'Standard', desc: 'More searches across local outlets, food and business blogs, and company posts.' },
+  deep: { name: 'Thorough', desc: 'The most searches, including smaller outlets and older articles about projects still underway.' },
+};
+export function depthName(p: Pick<Prefs, 'preset' | 'fams'>, sources: 'articles' | 'all' = 'all'): string {
+  return sources === 'articles' ? ARTICLE_PRESETS[p.preset].name : depthLabel(p as Prefs);
+}
+
 export const presetFams = (p: Tier) => FAMILIES.filter((f) => PRESETS[p].tiers.includes(f.tier)).map((f) => f.id);
 export const presetMap = (p: Tier) => Object.fromEntries(FAMILIES.map((f) => [f.id, PRESETS[p].tiers.includes(f.tier)]));
 
@@ -98,7 +108,7 @@ export function validatePrefs(p: Prefs): string[] {
 }
 
 export type DiffRow = [string, string, string];
-export function diffPrefs(a: Prefs, b: Prefs): DiffRow[] {
+export function diffPrefs(a: Prefs, b: Prefs, sources: 'articles' | 'all' = 'all'): DiffRow[] {
   const rows: DiffRow[] = [];
   const add = (k: string, x: string, y: string) => { if (x !== y) rows.push([k, x, y]); };
   add('Location', a.addressLabel, b.addressLabel);
@@ -108,8 +118,8 @@ export function diffPrefs(a: Prefs, b: Prefs): DiffRow[] {
   add('Event scope', ev(a), ev(b));
   const sh = (p: Prefs) => (p.areaMode === 'custom' ? [...p.inc.map((s) => `+ ${s.label}`), ...p.exc.map((s) => `− ${s.label}`)].join('; ') || 'Custom, no shapes' : 'Radius only');
   add('Area', sh(a), sh(b));
-  add('Research depth', depthLabel(a), depthLabel(b));
-  if (depthLabel(a) === 'Custom' && depthLabel(b) === 'Custom') add('Sources', selectedFams(a).map(famName).join(', '), selectedFams(b).map(famName).join(', '));
+  add('Research depth', depthName(a, sources), depthName(b, sources));
+  if (sources === 'all' && depthLabel(a) === 'Custom' && depthLabel(b) === 'Custom') add('Sources', selectedFams(a).map(famName).join(', '), selectedFams(b).map(famName).join(', '));
   add('Length', LENS[a.len].name, LENS[b.len].name);
   add('Minimum status', statusText(a.statusMin), statusText(b.statusMin));
   return rows;

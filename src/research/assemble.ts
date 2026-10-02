@@ -24,7 +24,7 @@ const norm = (u: string) => u.replace(/#.*$/, '').replace(/\/$/, '').replace(/^h
 
 export async function assemble(
   raw: ResearchResult, prefs: Prefs,
-  ctx: { geocode: (address: string) => Promise<Pt | null>; from: number; to: number; tz: string; fixture: boolean; limitations: string[]; recordUrls: Set<string>; trustCoords: boolean },
+  ctx: { geocode: (address: string) => Promise<Pt | null>; from: number; to: number; tz: string; fixture: boolean; limitations: string[]; recordUrls: Set<string>; trustCoords: boolean; depthName?: string },
 ): Promise<AssembledReport> {
   const seen = new Map([...raw.seenUrls].map(([u, v]) => [norm(u), { url: u, ...v }]));
   const area = areaOf(prefs);
@@ -84,7 +84,7 @@ export async function assemble(
     dropped,
     issue: {
       kind: 'sample', areaLabel: areaLabelOf(prefs), periodFrom: ctx.from, periodTo: ctx.to, tz: ctx.tz,
-      interests: prefs.cats.map(catName), depth: depthLabel(prefs), length: L.name, limitations,
+      interests: prefs.cats.map(catName), depth: ctx.depthName ?? depthLabel(prefs), length: L.name, limitations,
       items: kept.slice(0, L.main).map(strip), briefs: kept.slice(L.main, L.main + L.brief).map(strip), fixture: ctx.fixture, coverageOk: 0,
     },
   };

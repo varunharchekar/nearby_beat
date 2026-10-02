@@ -45,7 +45,7 @@ if (cmd === 'migrate') {
   const started = Date.now();
   const res = await r.run({
     areaName: 'Lower Greenville', city: 'Dallas, TX', center: [-96.77, 32.81], radiusMi: 0.5, includeNotes: [], excludeNotes: [], cats: ['food'], evAll: false,
-    depth: 'ann', depthLabel: 'Announcements', statusMin: '', maxItems: 3, lookbackDays: 60, today: new Date().toISOString().slice(0, 10), maxSearches: 3, records: [],
+    depth: 'ann', depthLabel: 'Announcements', statusMin: '', maxItems: 3, lookbackDays: 60, today: new Date().toISOString().slice(0, 10), maxSearches: 3, records: [], sources: cfg.research.sources, maxFetches: 2, fetchMaxTokens: cfg.research.fetchMaxTokens,
   }, (p) => process.stdout.write(`\r${p.stage}: ${p.queries.length} searches   `), new AbortController().signal);
   console.log(`\nOK in ${Math.round((Date.now() - started) / 1000)}s: ${res.report.items.length} items, ${res.usage.searches} searches, ~$${res.usage.costUsd.toFixed(2)}`);
   for (const it of res.report.items) console.log(`- ${it.name} (${it.address}): ${it.status} [${it.sources.map((s) => s.url).join(', ')}]`);

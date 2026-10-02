@@ -114,3 +114,24 @@ test('subscription request: consent, confirmation link, hand-off', async () => {
   await assert.rejects(rep.requestSubscription(app, other.draft, r.id, { email: 'x@example.com', consent: true, marketing: false }), /isn’t available/);
   assert.equal((await store.listSubscriptionRequests()).length, 1);
 });
+
+test('articles mode (default): no government feeds or records in the report', async () => {
+  const { app, store } = await setup();
+  assert.equal(app.cfg.research.sources, 'articles');
+  const d = await located(app);
+  const r = await rep.startReport(app, d, 'v1', { sync: true });
+  const x = (await store.getReport(r.id))!;
+  const items = [...x.issue!.items, ...x.issue!.briefs];
+  assert.ok(items.length > 0);
+  assert.ok(items.every((i) => i.evidenceLabel !== 'Primary record'), 'no official records');
+  assert.ok(x.issue!.limitations.some((l) => l.includes('does not check permit')));
+  assert.equal(x.issue!.depth, 'Standard');
+});
+
+test('all-sources mode includes official records', async () => {
+  const { app, store } = await setup({ RESEARCH_SOURCES: 'all' });
+  const d = await located(app);
+  const r = await rep.startReport(app, d, 'v1', { sync: true });
+  const x = (await store.getReport(r.id))!;
+  assert.ok([...x.issue!.items, ...x.issue!.briefs].some((i) => i.evidenceLabel === 'Primary record'));
+});

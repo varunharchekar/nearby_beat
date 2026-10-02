@@ -64,7 +64,7 @@ test('researcher continues after pause_turn and returns seen URLs, progress and 
   const responses = [turn('pause_turn', { query: 'Lower Greenville openings' }), turn('end_turn', { text: `Done.\n<report>${JSON.stringify(REPORT)}</report>` })];
   const fakeFetch = (async (_u: any, init: any) => { bodies.push(JSON.parse(init.body)); return new Response(streamOf(responses.shift()!), { status: 200 }); }) as typeof fetch;
   const r = new AnthropicResearcher({ apiKey: 'k', model: 'claude-sonnet-5-5', fetch: fakeFetch });
-  const req: ResearchRequest = { areaName: 'Lower Greenville', city: 'Dallas, TX', center: [-96.77, 32.81], radiusMi: 1, includeNotes: [], excludeNotes: [], cats: ['food'], evAll: false, depth: 'bal', depthLabel: 'Balanced research', statusMin: '', maxItems: 10, lookbackDays: 60, today: '2026-10-02', maxSearches: 20, records: [{ id: 'c1', url: 'https://data.texas.gov/x', title: 'TABC', name: 'Sable', place: '1900 Greenville Ave', status: 'Filed', summary: 's', date: '2026-09-18', family: 'alcohol' }] };
+  const req: ResearchRequest = { areaName: 'Lower Greenville', city: 'Dallas, TX', center: [-96.77, 32.81], radiusMi: 1, includeNotes: [], excludeNotes: [], cats: ['food'], evAll: false, depth: 'bal', depthLabel: 'Balanced research', statusMin: '', maxItems: 10, lookbackDays: 60, today: '2026-10-02', maxSearches: 20, sources: 'all', maxFetches: 20, fetchMaxTokens: 20000, records: [{ id: 'c1', url: 'https://data.texas.gov/x', title: 'TABC', name: 'Sable', place: '1900 Greenville Ave', status: 'Filed', summary: 's', date: '2026-09-18', family: 'alcohol' }] };
   const seenQueries: number[] = [];
   const res = await r.run(req, (p) => seenQueries.push(p.queries.length), new AbortController().signal);
   assert.equal(bodies.length, 2);
@@ -90,12 +90,12 @@ test('API errors are retried, then reported', async () => {
   let calls = 0;
   const f = (async () => { calls++; return new Response(JSON.stringify({ error: { message: 'bad key' } }), { status: 401 }); }) as typeof fetch;
   const r = new AnthropicResearcher({ apiKey: 'k', model: 'm', fetch: f });
-  await assert.rejects(r.run({ areaName: 'a', city: 'Dallas, TX', center: [0, 0], radiusMi: 1, includeNotes: [], excludeNotes: [], cats: ['food'], evAll: false, depth: 'ann', depthLabel: '', statusMin: '', maxItems: 1, lookbackDays: 60, today: '2026-10-02', maxSearches: 1, records: [] }, () => {}, new AbortController().signal), /401: bad key/);
+  await assert.rejects(r.run({ areaName: 'a', city: 'Dallas, TX', center: [0, 0], radiusMi: 1, includeNotes: [], excludeNotes: [], cats: ['food'], evAll: false, depth: 'ann', depthLabel: '', statusMin: '', maxItems: 1, lookbackDays: 60, today: '2026-10-02', maxSearches: 1, sources: 'articles', maxFetches: 1, fetchMaxTokens: 1000, records: [] }, () => {}, new AbortController().signal), /401: bad key/);
   assert.equal(calls, 1, '4xx is not retried');
 });
 
 test('prompt never includes the street address and carries the filters', () => {
-  const p = userPrompt({ areaName: 'Lower Greenville', city: 'Dallas, TX', center: [-96.771234, 32.812345], radiusMi: 2, includeNotes: ['Knox Henderson'], excludeNotes: ['North of Mockingbird Ln'], cats: ['food', 'events'], evAll: false, depth: 'deep', depthLabel: 'Deep research', statusMin: 'approved:records', maxItems: 20, lookbackDays: 60, today: '2026-10-02', maxSearches: 30, records: [] });
+  const p = userPrompt({ areaName: 'Lower Greenville', city: 'Dallas, TX', center: [-96.771234, 32.812345], radiusMi: 2, includeNotes: ['Knox Henderson'], excludeNotes: ['North of Mockingbird Ln'], cats: ['food', 'events'], evAll: false, depth: 'deep', depthLabel: 'Deep research', statusMin: 'approved:records', maxItems: 20, lookbackDays: 60, today: '2026-10-02', maxSearches: 30, sources: 'all', maxFetches: 30, fetchMaxTokens: 20000, records: [] });
   assert.ok(p.includes('32.812') && !p.includes('32.8123'), 'location rounded');
   assert.ok(p.includes('Exclude: North of Mockingbird Ln'));
   assert.ok(p.includes('zoning cases'));
@@ -140,4 +140,19 @@ test('assembly keeps only verified, located, in-area, matching items', async () 
   assert.ok(out.issue.limitations.some((l) => l.includes("couldn't place")));
   const statusOut = await assemble(raw, { ...prefs, statusMin: 'approved:records' }, { geocode: async (a) => geo[a] ?? null, from: 0, to: 1, tz: 'America/Chicago', fixture: false, limitations: [], recordUrls: new Set(), trustCoords: false });
   assert.ok(!statusOut.issue.items.some((i) => i.name === 'Permit'), 'filing below status filter');
+});
+
+test('articles mode: government sites blocked, fewer and smaller page reads, article-only instructions', async () => {
+  const bodies: any[] = [];
+  const f = (async (_u: any, init: any) => { bodies.push(JSON.parse(init.body)); return new Response(streamOf(turn('end_turn', { text: `<report>${JSON.stringify(REPORT)}</report>` })), { status: 200 }); }) as typeof fetch;
+  const r = new AnthropicResearcher({ apiKey: 'k', model: 'claude-haiku-4-5-20251001', fetch: f });
+  await r.run({ areaName: 'Lower Greenville', city: 'Dallas, TX', center: [-96.77, 32.81], radiusMi: 1, includeNotes: [], excludeNotes: [], cats: ['food'], evAll: false, depth: 'bal', depthLabel: 'Standard', statusMin: '', maxItems: 10, lookbackDays: 60, today: '2026-10-02', maxSearches: 20, sources: 'articles', maxFetches: 5, fetchMaxTokens: 6000, records: [] }, () => {}, new AbortController().signal);
+  const [search, fetchTool] = bodies[0].tools;
+  assert.ok(search.blocked_domains.includes('dallascityhall.com') && search.blocked_domains.includes('legistar.com'));
+  assert.equal(fetchTool.max_uses, 5);
+  assert.equal(fetchTool.max_content_tokens, 6000);
+  assert.ok(fetchTool.blocked_domains.includes('data.texas.gov'));
+  assert.match(bodies[0].system, /Do not search or open government websites/);
+  assert.match(bodies[0].messages[0].content, /up to 5 page reads/);
+  assert.ok(!/zoning cases, council/.test(bodies[0].messages[0].content), 'no records depth guide');
 });

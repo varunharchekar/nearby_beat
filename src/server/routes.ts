@@ -171,7 +171,8 @@ export function buildRouter(app: App): Router {
     const preset = one(f.preset) as keyof typeof PRESETS;
     const boxes = Object.fromEntries(FAMILIES.map((x) => [x.id, many(f.fams).includes(x.id)]));
     const boxesChanged = one(f.custom) && FAMILIES.some((x) => !!p.fams[x.id] !== boxes[x.id]);
-    if (preset in PRESETS && PRESETS[preset].name !== depthLabel(p)) { p.preset = preset; p.fams = presetMap(preset); }
+    if (app.cfg.research.sources === 'articles') { if (preset in PRESETS) { p.preset = preset; p.fams = presetMap(preset); } }
+    else if (preset in PRESETS && PRESETS[preset].name !== depthLabel(p)) { p.preset = preset; p.fams = presetMap(preset); }
     else if (boxesChanged) p.fams = boxes;
     if (one(f.len) in LENS) p.len = one(f.len) as Prefs['len'];
     d.ack = one(f.ack) === '1';

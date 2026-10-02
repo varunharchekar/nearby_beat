@@ -6,8 +6,8 @@ Enter an address, pick a radius and what you care about, and Nearby researches w
 
 ```
 address + filters
-  → official records already in our database for that area (Dallas feeds)
-  → Claude with web search + web fetch, streaming progress to the page
+  → Claude with web search + web fetch over recent articles and business announcements,
+    streaming progress to the page (government and records sites are blocked)
   → JSON report: business, address, latest update, why it matters, sources
   → validation: every cited URL must have been seen during the research,
     every address is geocoded and must fall inside your area (exclusions win),
@@ -17,6 +17,7 @@ address + filters
 
 - **Privacy.** The research gets your neighborhood name and a location rounded to about 100 m, never your street address. Addresses are encrypted at rest; searches and reports are deleted after 24 hours.
 - **Grounding.** Items whose sources weren't seen, that can't be placed on the map, or that fall outside the area are left out, and the report says how many and why ("Left out").
+- **Sources.** By default (`RESEARCH_SOURCES=articles`) research uses only recent news, blogs and business announcements; government and permit sites are blocked at the search tool, page reads are capped (5 per report, 6,000 tokens each), and the Dallas record feeds are switched off. `RESEARCH_SOURCES=all` brings back official records and government sites.
 - **Cost control.** Searches per report by depth (10 / 20 / 30), reports per search (3), per visitor per day (3) and a daily cap (100), all configurable. Failed or timed-out runs don't count. Unchanged settings reuse the last report for 6 hours.
 - **Rough cost per report** with Claude Sonnet 5.5: about $0.50 to $1.50, mostly search results read as input tokens plus $0.01 per search. The operator console shows the actual estimate per report.
 
