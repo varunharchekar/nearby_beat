@@ -57,7 +57,7 @@ export function userPrompt(r: ResearchRequest): string {
   return `Today is ${r.today}. Research what is changing near ${r.areaName}, ${r.city}.
 
 Area: within about ${r.radiusMi} mile${r.radiusMi === 1 ? '' : 's'} of latitude ${r.center[1].toFixed(3)}, longitude ${r.center[0].toFixed(3)}.${r.includeNotes.length ? `\nAlso include: ${r.includeNotes.join('; ')}.` : ''}${r.excludeNotes.length ? `\nExclude: ${r.excludeNotes.join('; ')}.` : ''}
-Time window: changes announced, filed, started, opened or closed in the last ${r.lookbackDays} days, plus anything scheduled in the coming weeks.
+Time window: changes announced, filed, started, opened or closed in the last ${r.lookbackDays} days, plus projects announced earlier that are still upcoming or under construction, and anything scheduled in the coming months.
 
 Interests:
 ${catLines}
@@ -65,9 +65,9 @@ ${r.cats.includes('events') ? (r.evAll ? 'Include opening events for any kind of
 
 Research depth: ${r.sources === 'articles' ? ARTICLE_DEPTH[r.depth] : DEPTH_GUIDE[r.depth]}
 Status filter: ${STATUS_GUIDE[r.statusMin] ?? STATUS_GUIDE['']}
-You have up to ${r.maxSearches} web searches${r.sources === 'articles' ? ` and up to ${r.maxFetches} page reads` : ''}. Use several different queries (neighborhood names, main streets, "opening", "coming soon", "closing", ${r.sources === 'articles' ? '"new restaurant", "construction", local news outlets' : '"permit", "zoning", local news outlets'}).
-${records}
-Return up to ${r.maxItems} of the most meaningful items, best first: imminent openings and opening events, then timeline changes, new announcements, closures, construction milestones, then early signals. Fewer good items beat padding. If you find nothing verifiable, return an empty list.
+You have up to ${r.maxSearches} web searches${r.sources === 'articles' ? ` and up to ${r.maxFetches} page reads` : ''}. Use many different queries (the neighborhood and nearby neighborhoods, each main street and cross street, ZIP code, "opening", "coming soon", "closing", ${r.sources === 'articles' ? '"new restaurant", "construction", local news outlets' : '"permit", "zoning", local news outlets'}).
+${records}${r.alreadyFound?.length ? `\nThese were already found. Don't repeat them; find different ones:\n${r.alreadyFound.map((n) => `- ${n}`).join('\n')}\n` : ''}
+Aim for at least ${r.minItems ?? 15} items and return up to ${r.maxItems}, best first: imminent openings and opening events, then timeline changes, new announcements, closures, construction milestones, then early signals. Keep searching with new queries until you reach that number or run out of searches. Every item must still be real, sourced and inside the area; never pad with invented items or places outside the area. If you find nothing verifiable, return an empty list.
 
 When you are done researching, reply with only this JSON inside <report></report> tags:
 <report>

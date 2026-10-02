@@ -17,6 +17,10 @@ export interface ResearchRequest {
   lookbackDays: number;
   today: string;
   maxSearches: number;
+  /** Aim for at least this many items. */
+  minItems?: number;
+  /** Second pass: names already found, so the research looks for different ones. */
+  alreadyFound?: string[];
   /** 'articles': news and announcements only; 'all': also official records and government sites. */
   sources: 'articles' | 'all';
   maxFetches: number;

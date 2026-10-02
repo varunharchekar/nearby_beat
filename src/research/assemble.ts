@@ -33,7 +33,11 @@ export async function assemble(
   const names = new Set<string>();
   const statusMin = prefs.statusMin ? prefs.statusMin.split(':') : null;
 
+  const tried = new Set<string>();
   for (const it of raw.report.items) {
+    const k0 = `${it.name}|${it.address}`.toLowerCase();
+    if (tried.has(k0)) continue;
+    tried.add(k0);
     const sources = it.sources.filter((s) => seen.has(norm(s.url)));
     if (!sources.length) { dropped.push({ name: it.name, reason: 'no source we could verify' }); continue; }
     const key = it.name.toLowerCase().replace(/[^a-z0-9]/g, '');

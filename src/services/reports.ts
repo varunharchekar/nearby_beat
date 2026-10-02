@@ -113,7 +113,7 @@ export async function runReport(app: App, id: string): Promise<void> {
       cats: prefs.cats, evAll: prefs.evAll, depth: tier, depthLabel: depthName(prefs, app.cfg.research.sources), statusMin: prefs.statusMin,
       sources: app.cfg.research.sources, maxFetches: app.cfg.research.maxFetches, fetchMaxTokens: app.cfg.research.fetchMaxTokens,
       maxItems: LENS[prefs.len].main + LENS[prefs.len].brief, lookbackDays: app.cfg.research.lookbackDays, today: new Date(now).toISOString().slice(0, 10),
-      maxSearches: app.cfg.research.maxSearches[tier], records,
+      maxSearches: app.cfg.research.maxSearches[tier], records, minItems: app.cfg.research.minItems,
     };
     await save({ progress: { stage: 'searching', queries: [], fetched: [], note: records.length ? `${records.length} official records found in your area` : undefined } });
     const onProgress = (p: Progress) => {
@@ -121,7 +121,7 @@ export async function runReport(app: App, id: string): Promise<void> {
       const t = Date.now();
       if (t - lastSave > 700) { lastSave = t; void app.store.saveReport(rep); }
     };
-    const raw = await app.researcher!.run(req, onProgress, ctrl.signal);
+    let raw = await app.researcher!.run(req, onProgress, ctrl.signal);
     await save({ progress: { ...rep.progress, stage: 'placing' } });
     const down = await downFamilies(app);
     const limitations: string[] = [];
@@ -129,10 +129,32 @@ export async function runReport(app: App, id: string): Promise<void> {
     else if (!records.length && tier !== 'ann') limitations.push('No official permit or license feed covers this area yet, so findings come from web sources.');
     for (const f of down) limitations.push(`The ${f.replace('_', ' ')} feed failed to refresh, so some official records may be missing.`);
     if (!articles && prefs.cats.includes('fitness')) limitations.push('Fitness and wellness businesses rarely appear in public records, so they depend on announcements and reporting.');
-    const out = await assemble(raw, prefs, {
-      geocode: (a) => geocodeNear(app, a, prefs.center, city), from, to: now, tz: app.cfg.tz, fixture: app.cfg.mode === 'fixture',
+    const actx = {
+      geocode: (a: string) => geocodeNear(app, a, prefs.center, city), from, to: now, tz: app.cfg.tz, fixture: app.cfg.mode === 'fixture',
       limitations, recordUrls: new Set(records.map((r) => r.url)), trustCoords: app.researcher!.name === 'fixture', depthName: depthName(prefs, app.cfg.research.sources),
-    });
+    };
+    let out = await assemble(raw, prefs, actx);
+    // Too few items: one more pass that looks for different ones, then merge.
+    const target = Math.min(app.cfg.research.minItems, req.maxItems);
+    const kept = out.issue.items.length + out.issue.briefs.length;
+    if (kept < target && !ctrl.signal.aborted) {
+      const before = { queries: [...rep.progress.queries], fetched: [...rep.progress.fetched] };
+      await save({ progress: { ...rep.progress, stage: 'searching', note: `Found ${kept} so far; searching for more` } });
+      const more = await app.researcher!.run(
+        { ...req, maxSearches: Math.max(5, Math.ceil(req.maxSearches / 2)), minItems: target - kept, alreadyFound: raw.report.items.map((i) => `${i.name} (${i.address})`) },
+        (p) => onProgress({ ...p, queries: [...before.queries, ...p.queries], fetched: [...before.fetched, ...p.fetched] }),
+        ctrl.signal,
+      ).catch((e) => { app.log('report.second_pass_failed', { report: id, error: (e as Error).message.slice(0, 200) }); return null; });
+      if (more) {
+        raw = {
+          report: { summary: raw.report.summary || more.report.summary, items: [...raw.report.items, ...more.report.items], coverage_notes: [...(raw.report.coverage_notes ?? []), ...(more.report.coverage_notes ?? [])].slice(0, 2) },
+          seenUrls: new Map([...raw.seenUrls, ...more.seenUrls]),
+          usage: { searches: raw.usage.searches + more.usage.searches, inputTokens: raw.usage.inputTokens + more.usage.inputTokens, outputTokens: raw.usage.outputTokens + more.usage.outputTokens, costUsd: raw.usage.costUsd + more.usage.costUsd },
+        };
+        await save({ progress: { ...rep.progress, stage: 'placing', note: undefined } });
+        out = await assemble(raw, prefs, actx);
+      }
+    }
     await save({ status: 'ready', summary: out.summary, issue: out.issue, dropped: out.dropped, usage: raw.usage, finishedAt: app.clock.now(), progress: { ...rep.progress, stage: 'done' } });
     app.log('report.ready', { report: id, items: out.issue.items.length + out.issue.briefs.length, dropped: out.dropped.length, searches: raw.usage.searches, costUsd: Number(raw.usage.costUsd.toFixed(3)) });
   } catch (e) {

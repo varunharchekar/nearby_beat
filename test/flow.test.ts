@@ -143,3 +143,27 @@ test('articles mode never asks to confirm source availability', async () => {
   assert.deepEqual(ob.reportBlockers(app, draft), []);
   await assert.rejects(rep.startReport(app, draft, 'v1'), /ANTHROPIC_API_KEY is missing/);
 });
+
+test('second pass runs when the first finds too few items', async () => {
+  const calls: { alreadyFound?: string[]; minItems?: number }[] = [];
+  const src = 'https://news.example/a';
+  const item = (n: number) => ({ name: `Cafe ${n}`, category: 'food' as const, stage: 'announced' as const, status: 'Upcoming', what: 'New cafe.', address: `${n} Sample Street`, evidence_type: 'news_report' as const, sources: [{ url: src }], coords: [-96.77, 32.81] as [number, number] });
+  const r: Researcher = {
+    name: 'fixture',
+    async run(req) {
+      calls.push({ alreadyFound: req.alreadyFound, minItems: req.minItems });
+      const items = calls.length === 1 ? [item(1), item(2)] : [item(2), item(3), item(4)];
+      return { report: { summary: 's', items }, seenUrls: new Map([[src, { title: 'A' }]]), usage: { searches: 3, inputTokens: 1, outputTokens: 1, costUsd: 0.1 } };
+    },
+  };
+  const { app, store } = await setup({ MIN_ITEMS: '5' }, r);
+  const d = await located(app);
+  d.prefs!.cats = ['food'];
+  const rep0 = await rep.startReport(app, d, 'v1', { sync: true });
+  const x = (await store.getReport(rep0.id))!;
+  assert.equal(calls.length, 2);
+  assert.equal(calls[1].minItems, 3);
+  assert.ok(calls[1].alreadyFound!.some((n) => n.startsWith('Cafe 1')));
+  assert.equal(x.issue!.items.length + x.issue!.briefs.length, 4, 'merged and deduplicated');
+  assert.equal(x.usage!.searches, 6);
+});
