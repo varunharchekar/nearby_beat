@@ -29,8 +29,19 @@ export function buildRouter(app: App): Router {
   const draftOf = (c: Ctx) => ob.loadDraft(app, c.cookies.nb_draft);
   const setDraftCookie = (c: Ctx, token: string) => c.setCookie('nb_draft', token, 24 * 3600);
   const maxOf = async (d: Draft) => V.maxStep(d);
-  const signPlan = (scope: string, key: string, ops: PrefOp[]) => signValue({ s: scope, k: sha256(key), ops }, app.cfg.sessionSecret);
-  const readPlan = (t: string, scope: string, key: string) => { const v = verifyValue<{ s: string; k: string; ops: PrefOp[] }>(t, app.cfg.sessionSecret); return v && v.s === scope && v.k === sha256(key) ? v.ops : null; };
+  /** The report page's "Change and run again" form: interests, radius, depth and length. */
+  const quickOps = (f: Record<string, string | string[]>, p: Prefs): PrefOp[] => {
+    const cats = many(f.cats).filter((x) => CATS.some((k) => k.id === x)) as Prefs['cats'];
+    if (!cats.length) throw new UserError('Pick at least one interest.');
+    const ops: PrefOp[] = [{ k: 'cats', v: cats }];
+    const radius = Number(one(f.radius));
+    if (p.areaMode === 'radius' && RADII.includes(radius)) ops.push({ k: 'radiusMi', v: radius });
+    const preset = one(f.preset);
+    if ((preset === 'ann' || preset === 'bal' || preset === 'deep') && preset !== p.preset) ops.push({ k: 'preset', v: preset });
+    const len = one(f.len);
+    if (len in LENS) ops.push({ k: 'len', v: len as Prefs['len'] });
+    return ops;
+  };
 
   async function withDraft(c: Ctx, fn: (d: Draft) => Promise<void>) {
     const d = await draftOf(c);
@@ -95,7 +106,21 @@ export function buildRouter(app: App): Router {
     if (!cand.covered) return page(c, { title: 'Outside coverage', body: V.outsidePage(app, cand), nav: 'flow' });
     page(c, { title: 'Confirm your location', body: V.confirmPin(app, cand, radius, null), nav: 'flow' });
   }));
-  r.post('/start/location/choose', async (c) => withDraft(c, async () => redirect(c, `/start/location?c=${encodeURIComponent(one(c.form.candidate))}`)));
+  // Picking from the list is the confirmation; no second "is this the right spot?" step.
+  r.post('/start/location/choose', async (c) => withDraft(c, async (d) => {
+    const cand = d.candidates?.find((x) => x.id === one(c.form.candidate));
+    if (!cand) return redirect(c, '/');
+    if (!cand.covered) return page(c, { title: 'Outside coverage', body: V.outsidePage(app, cand), nav: 'flow' });
+    const radius = (await app.store.kvGet<number>(`draft-radius:${d.id}`)) ?? 1;
+    try {
+      const res = await ob.confirmLocation(app, d, cand.id, undefined, radius);
+      if (!res.covered) return page(c, { title: 'Outside coverage', body: V.outsidePage(app, cand), nav: 'flow' });
+      redirect(c, '/start/interests');
+    } catch (e) {
+      if (!(e instanceof UserError)) throw e;
+      page(c, { title: 'Choose your location', body: V.candidatesPage(d.candidates!, e.message), nav: 'flow' }, 422);
+    }
+  }));
   r.post('/start/location/confirm', async (c) => withDraft(c, async (d) => {
     const cand = d.candidates?.find((x) => x.id === one(c.form.candidate));
     if (!cand) return redirect(c, '/');
@@ -186,7 +211,7 @@ export function buildRouter(app: App): Router {
   }));
 
   /* ---------- report ---------- */
-  const reportView = async (c: Ctx, d: Draft, o: { error?: string; plan?: { diff: any; token: string; message: string | null } | null; text?: string; sub?: { errors?: Record<string, string>; email?: string; sent?: boolean } } = {}, status = 200) => {
+  const reportView = async (c: Ctx, d: Draft, o: { error?: string; sub?: { errors?: Record<string, string>; email?: string; sent?: boolean } } = {}, status = 200) => {
     const report = d.currentReportId ? await app.store.getReport(d.currentReportId) : null;
     if (!report) return redirect(c, '/start/depth');
     if (report.status === 'running') return page(c, { title: 'Researching', body: V.progressPage(app, d, report, app.clock.now()), nav: 'flow', refresh: 3 }, status);
@@ -199,15 +224,8 @@ export function buildRouter(app: App): Router {
     try {
       switch (one(f.action)) {
         case 'run': await rep.startReport(app, d, ipKey(c)); break;
-        case 'refine': {
-          const text = one(f.text);
-          const plan = await ob.planRefinement(app, d.prefs!, text);
-          return reportView(c, d, { text, plan: { diff: plan.diff, token: signPlan(d.id, prefsKey(d.prefs!), plan.ops), message: plan.message } });
-        }
-        case 'apply': {
-          const ops = readPlan(one(f.plan), d.id, prefsKey(d.prefs!));
-          if (!ops) throw new UserError('Your settings changed since that proposal. Describe the change again.');
-          await ob.applyRefinement(app, d, ops);
+        case 'rerun': {
+          await ob.applyRefinement(app, d, quickOps(f, d.prefs!));
           await rep.startReport(app, d, ipKey(c));
           break;
         }

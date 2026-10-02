@@ -63,6 +63,14 @@ test('HTTP journey: address → filters → research → report → subscribe �
     const cand = r.text.match(/name="candidate" value="([^"]+)"/)![1];
     r = await u.post('/start/location/confirm', { candidate: cand, lng: '', lat: '' });
     assert.equal(r.location, '/start/interests');
+
+    // Several matches: picking one is the confirmation (no second pin page).
+    const u2 = client(base);
+    r = await follow(u2, await u2.post('/start', { q: 'Main Street', radius: '1' }));
+    assert.match(r.text, /Which one did you mean/);
+    const pick = r.text.match(/name="candidate" value="([^"]+)"/)![1];
+    r = await u2.post('/start/location/choose', { candidate: pick });
+    assert.equal(r.location, '/start/interests');
     r = await u.post('/start/interests', { next: '1' });
     assert.equal(r.status, 422, 'zero categories blocked');
     r = await u.post('/start/interests', { cats: ['food', 'shops', 'events', 'public', 'dev'], next: '1' });
@@ -88,9 +96,15 @@ test('HTTP journey: address → filters → research → report → subscribe �
     const o = await other.get('/start/report');
     assert.equal(o.status, 303);
 
-    // Refine shows a diff before re-running.
-    r = await u.post('/start/report', { action: 'refine', text: 'Only food' });
-    assert.match(r.text, /Apply and research again/);
+    // No free-text feedback box; settings are changed with a form and re-run.
+    assert.match(r.text, /Change and run again/);
+    assert.ok(!r.text.includes('<textarea'), 'no free-text feedback');
+    r = await u.post('/start/report', { action: 'rerun', cats: [], radius: '1', preset: 'bal', len: 'standard' });
+    assert.equal(r.status, 422, 'at least one interest');
+    r = await follow(u, await u.post('/start/report', { action: 'rerun', cats: ['food'], radius: '2', preset: 'bal', len: 'standard' }));
+    assert.match(r.text, /Researching your area|Most relevant/);
+    r = await waitReport(u);
+    assert.match(r.text, /version 2/);
 
     // Subscribe: consent required; confirmation via single-use link.
     const reportId = r.text.match(/name="report" value="([^"]+)"/)![1];

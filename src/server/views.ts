@@ -72,8 +72,8 @@ export function landing(app: App, o: { error?: string; q?: string; radius?: numb
   </form></div>`;
 }
 
-export function candidatesPage(cands: GeoCandidate[]) {
-  return flow(1, 1, `${head(1, cands.length > 1 ? 'Which one did you mean?' : 'Confirm your location')}
+export function candidatesPage(cands: GeoCandidate[], error?: string) {
+  return flow(1, 1, `${head(1, cands.length > 1 ? 'Which one did you mean?' : 'Confirm your location')}${errBox(error)}
   <div class="stack-s">${cands.map((c) => `<form method="post" action="/start/location/choose"><input type="hidden" name="candidate" value="${esc(c.id)}"><button class="opt" style="width:100%;text-align:left"><span><b>${esc(c.label)}</b><span class="hint">${esc(c.city)}${c.covered ? '' : ' · outside our coverage area'}${c.approx ? ' · approximate' : ''}</span></span></button></form>`).join('')}</div>
   <div><a class="btn" href="/">Search again</a></div>`);
 }
@@ -262,7 +262,7 @@ export function reportBody(app: App, r: Report) {
   </div>`;
 }
 
-export function reportPage(app: App, d: Draft, r: Report, o: { error?: string; plan?: { diff: DiffRow[]; token: string; message: string | null } | null; text?: string; sub?: { errors?: Record<string, string>; email?: string; sent?: boolean }; budget: string | null }) {
+export function reportPage(app: App, d: Draft, r: Report, o: { error?: string; sub?: { errors?: Record<string, string>; email?: string; sent?: boolean }; budget: string | null }) {
   const p = d.prefs!;
   const stale = JSON.stringify(r.prefs) !== JSON.stringify(p);
   let main = '';
@@ -278,13 +278,19 @@ export function reportPage(app: App, d: Draft, r: Report, o: { error?: string; p
     <label class="check small"><input type="checkbox" name="marketing" value="1"><span>Also send occasional product news (optional)</span></label>
     <button class="btn primary">Subscribe</button></form>`}
    <p class="hint">Plans and pricing are shown before you pay. Nothing is charged from this page.</p></div>` : '';
-  const refine = `<div class="panel stack-s" id="refine"><span class="lbl">Make changes</span>
-   <form method="post" action="/start/report" class="stack-s"><input type="hidden" name="action" value="refine"><div class="field"><label for="rtext" class="sr">What would you like changed?</label><textarea id="rtext" name="text" placeholder="What would you like changed?">${esc(o.text ?? '')}</textarea></div>
-   <div class="chips">${['Only food', 'Less detail', 'Make it 2 miles', 'Dig deeper', 'Show permits only when construction is approved'].map((t) => `<button type="button" class="chip" data-fill="${esc(t)}" data-target="rtext">${esc(t)}</button>`).join('')}</div>
-   <div><button class="btn sm">Show proposed changes</button></div></form>
-   ${o.plan?.message ? `<p class="hint" role="status">${esc(o.plan.message)}</p>` : ''}
-   ${o.plan?.diff.length ? `${diffTable(o.plan.diff)}<form method="post" action="/start/report" class="btnrow"><input type="hidden" name="action" value="apply"><input type="hidden" name="plan" value="${esc(o.plan.token)}"><button class="btn primary sm">Apply and research again</button><a class="btn sm" href="/start/report">Cancel</a></form>` : ''}
-   <div class="btnrow"><a class="btn sm" href="/start/interests">Interests</a><a class="btn sm" href="/start/area">Area</a><a class="btn sm" href="/start/depth">Depth and length</a></div>
+  const radiusOpts = p.areaMode === 'radius'
+    ? `<div class="field"><label for="rr">Radius</label><select id="rr" name="radius">${RADII.map((v) => `<option value="${v}" ${v === p.radiusMi ? 'selected' : ''}>${v} mile${v === 1 ? '' : 's'}</option>`).join('')}</select></div>`
+    : '<p class="hint">Custom area. <a href="/start/area">Edit the map</a> to change it.</p>';
+  const depthOpts = (['ann', 'bal', 'deep'] as const).map((t) => `<option value="${t}" ${p.preset === t ? 'selected' : ''}>${esc(app.cfg.research.sources === 'articles' ? ARTICLE_PRESETS[t].name : PRESETS[t].name)}</option>`).join('');
+  const lenOpts = (Object.keys(LENS) as (keyof typeof LENS)[]).map((k) => `<option value="${k}" ${p.len === k ? 'selected' : ''}>${esc(LENS[k].name)}</option>`).join('');
+  const refine = `<div class="panel stack-s" id="refine"><span class="lbl">Change and run again</span>
+   <form method="post" action="/start/report" class="stack-s"><input type="hidden" name="action" value="rerun">
+    <fieldset class="stack-s" style="border:0;padding:0;margin:0"><legend class="small"><b>Interests</b></legend>
+     ${CATS.map((k) => `<label class="check small"><input type="checkbox" name="cats" value="${k.id}" ${p.cats.includes(k.id) ? 'checked' : ''}><span>${esc(k.name)}</span></label>`).join('')}</fieldset>
+    <div class="grid2" style="gap:10px">${radiusOpts}
+     <div class="field"><label for="rd">Research depth</label><select id="rd" name="preset">${depthOpts}</select></div>
+     <div class="field"><label for="rl">Length</label><select id="rl" name="len">${lenOpts}</select></div></div>
+    <div><button class="btn primary sm">Run again</button></div></form>
    ${o.budget ? `<p class="hint">${esc(o.budget)}</p>` : ''}</div>`;
   return flow(5, 5, `${errBox(o.error)}
   ${stale ? `<div class="note warn stack-s"><p><b>Your settings changed since this report.</b> Run it again to see them.</p>${diffTable(diffPrefs(r.prefs, p, app.cfg.research.sources))}<form method="post" action="/start/report"><input type="hidden" name="action" value="run"><button class="btn primary sm">Research again</button></form></div>` : ''}
