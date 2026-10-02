@@ -65,12 +65,32 @@ async function recordsFor(app: App, prefs: Prefs, since: number): Promise<Offici
   return out;
 }
 
-async function geocodeNear(app: App, address: string, center: Pt): Promise<Pt | null> {
-  try {
-    const r = await app.geocoder.search(address, { types: ['address', 'intersection'], proximity: center, limit: 1 });
-    const hit = r.find((x) => x.kind === 'address' || x.kind === 'intersection');
-    return hit ? hit.point : null;
-  } catch { return null; }
+/**
+ * Without a neighborhood name, describe the area by its street and ZIP ("Greenville Ave, ZIP 75206")
+ * so research stays local instead of covering the whole city. The house number is never included.
+ */
+export function areaFromAddress(label: string): string | null {
+  const parts = label.split(',').map((x) => x.trim());
+  const street = parts[0]?.replace(/^\d+[A-Za-z-]*\s+/, '').replace(/\b([A-Z]+)\b/g, (w) => w[0] + w.slice(1).toLowerCase());
+  const zip = label.match(/\b(\d{5})(?:-\d{4})?\b(?!.*\b\d{5}\b)/)?.[1];
+  if (!street || /^\d/.test(street)) return null;
+  return zip ? `${street}, ZIP ${zip}` : street;
+}
+
+async function geocodeNear(app: App, address: string, center: Pt, city: string): Promise<Pt | null> {
+  const tries = [address];
+  // Add the city when the model left it out, and try a cleaned-up variant (no suite, no trailing periods).
+  if (city && !address.toLowerCase().includes(city.split(',')[0].toLowerCase())) tries.push(`${address}, ${city}`);
+  const cleaned = address.replace(/\b(suite|ste|unit|#)\s*[\w-]+,?/gi, '').replace(/\.(?=\s|,|$)/g, '').replace(/\s+,/g, ',');
+  if (cleaned !== address) tries.push(cleaned, `${cleaned}, ${city}`);
+  for (const q of [...new Set(tries)]) {
+    try {
+      const r = await app.geocoder.search(q, { types: ['address', 'intersection'], proximity: center, limit: 1 });
+      const hit = r.find((x) => x.kind === 'address' || x.kind === 'intersection');
+      if (hit) return hit.point;
+    } catch { /* try next */ }
+  }
+  return null;
 }
 
 export async function runReport(app: App, id: string): Promise<void> {
@@ -86,9 +106,9 @@ export async function runReport(app: App, id: string): Promise<void> {
     const articles = app.cfg.research.sources === 'articles';
     const records = articles ? [] : await recordsFor(app, prefs, from);
     const tier = tierOf(prefs);
-    const city = prefs.addressLabel.split(',').slice(1).join(',').replace(/\b\d{5}(-\d{4})?\b/, '').trim() || prefs.areaName;
+    const city = prefs.addressLabel.split(',').slice(1).map((x) => x.trim()).filter((x) => x && !/^\d{5}(-\d{4})?$/.test(x)).join(', ').replace(/\s+\d{5}(-\d{4})?$/, '') || prefs.areaName;
     const req: ResearchRequest = {
-      areaName: prefs.areaName === 'your address' ? city : prefs.areaName, city, center: prefs.center, radiusMi: prefs.radiusMi,
+      areaName: prefs.areaName === 'your address' ? areaFromAddress(prefs.addressLabel) ?? city : prefs.areaName, city, center: prefs.center, radiusMi: prefs.radiusMi,
       includeNotes: prefs.areaMode === 'custom' ? prefs.inc.map((s) => s.label) : [], excludeNotes: prefs.areaMode === 'custom' ? prefs.exc.map((s) => s.label) : [],
       cats: prefs.cats, evAll: prefs.evAll, depth: tier, depthLabel: depthName(prefs, app.cfg.research.sources), statusMin: prefs.statusMin,
       sources: app.cfg.research.sources, maxFetches: app.cfg.research.maxFetches, fetchMaxTokens: app.cfg.research.fetchMaxTokens,
@@ -110,7 +130,7 @@ export async function runReport(app: App, id: string): Promise<void> {
     for (const f of down) limitations.push(`The ${f.replace('_', ' ')} feed failed to refresh, so some official records may be missing.`);
     if (!articles && prefs.cats.includes('fitness')) limitations.push('Fitness and wellness businesses rarely appear in public records, so they depend on announcements and reporting.');
     const out = await assemble(raw, prefs, {
-      geocode: (a) => geocodeNear(app, a, prefs.center), from, to: now, tz: app.cfg.tz, fixture: app.cfg.mode === 'fixture',
+      geocode: (a) => geocodeNear(app, a, prefs.center, city), from, to: now, tz: app.cfg.tz, fixture: app.cfg.mode === 'fixture',
       limitations, recordUrls: new Set(records.map((r) => r.url)), trustCoords: app.researcher!.name === 'fixture', depthName: depthName(prefs, app.cfg.research.sources),
     });
     await save({ status: 'ready', summary: out.summary, issue: out.issue, dropped: out.dropped, usage: raw.usage, finishedAt: app.clock.now(), progress: { ...rep.progress, stage: 'done' } });

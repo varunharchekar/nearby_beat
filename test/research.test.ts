@@ -156,3 +156,19 @@ test('articles mode: government sites blocked, fewer and smaller page reads, art
   assert.match(bodies[0].messages[0].content, /up to 5 page reads/);
   assert.ok(!/zoning cases, council/.test(bodies[0].messages[0].content), 'no records depth guide');
 });
+
+test('model output is cleaned: citation tags removed, notes trimmed at sentence ends', async () => {
+  const { cleanText, clip } = await import('../src/research/prompt.ts');
+  assert.equal(cleanText('<cite index="51-1,51-2">Corsaire comes from East Dallas.</cite> <cite index="5">More.</cite>'), 'Corsaire comes from East Dallas. More.');
+  assert.equal(clip('First sentence here. Second sentence that is quite long and goes on.', 30), 'First sentence here.');
+  const r = parseReport(`<report>${JSON.stringify({ summary: '<cite index="1">S</cite>', items: [{ ...REPORT.items[0], why_it_matters: '<cite index="2">Why.</cite>' }], coverage_notes: ['a', 'b', 'c'] })}</report>`);
+  assert.equal(r.items[0].what, 'Why.');
+  assert.equal(r.summary, 'S');
+  assert.equal(r.coverage_notes!.length, 2);
+});
+
+test('area is described by street and ZIP when no neighborhood is known', async () => {
+  const { areaFromAddress } = await import('../src/services/reports.ts');
+  assert.equal(areaFromAddress('2000 GREENVILLE AVE, DALLAS, TX, 75206'), 'Greenville Ave, ZIP 75206');
+  assert.equal(areaFromAddress('Greenville Ave & Ross Ave, Dallas, TX 75206'), 'Greenville Ave & Ross Ave, ZIP 75206');
+});
