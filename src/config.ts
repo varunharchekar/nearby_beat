@@ -55,7 +55,8 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
   if (mode === 'live' && sessionSecret.length < 32) throw new Error('SESSION_SECRET must be at least 32 characters in live mode.');
   if (mode === 'live' && keyHex === devKey) throw new Error('Set a real ADDRESS_ENCRYPTION_KEY in live mode.');
   const mapboxToken = env.MAPBOX_TOKEN || null;
-  const apiKey = env.ANTHROPIC_API_KEY || null;
+  // Trim stray spaces and quotes from copy-pasted keys.
+  const apiKey = (env.ANTHROPIC_API_KEY ?? '').trim().replace(/^['"]|['"]$/g, '') || null;
   const bbox = env.COVERAGE_BBOX ? (env.COVERAGE_BBOX.split(',').map(Number) as [number, number, number, number]) : null;
   return {
     mode, port,
