@@ -56,8 +56,9 @@ export function userPrompt(r: ResearchRequest): string {
     : '';
   return `Today is ${r.today}. Research what is changing near ${r.areaName}, ${r.city}.
 
+Only include places in ${r.city}. Many cities share street and neighborhood names; check the city in each source and skip results from anywhere else.
 Area: within about ${r.radiusMi} mile${r.radiusMi === 1 ? '' : 's'} of latitude ${r.center[1].toFixed(3)}, longitude ${r.center[0].toFixed(3)}.${r.includeNotes.length ? `\nAlso include: ${r.includeNotes.join('; ')}.` : ''}${r.excludeNotes.length ? `\nExclude: ${r.excludeNotes.join('; ')}.` : ''}
-Time window: changes announced, filed, started, opened or closed in the last ${r.lookbackDays} days, plus projects announced earlier that are still upcoming or under construction, and anything scheduled in the coming months.
+Time window: changes announced, filed, started, opened or closed in the last ${r.lookbackDays} days, plus projects announced earlier that are still upcoming or under construction, and anything scheduled in the coming months. Do not include businesses that opened or closed before that window, even if an article about them is still online. Check the publish date of every source.
 
 Interests:
 ${catLines}
@@ -82,7 +83,7 @@ When you are done researching, reply with only this JSON inside <report></report
       "stage": "one of: signal, announced, filed, approved, construction, open, closed",
       "latest_update": "short status as of today, e.g. 'October 2026', 'Upcoming', 'Delayed to later this fall', 'Permit filed, not approved', 'Closed'",
       "why_it_matters": "two to four sentences a neighbor would find useful: what it replaces, who is behind it, what changed and when, size or permit value if a source gives it",
-      "address": "street address or 'Street & Cross St', City, ST",
+      "address": "street address or 'Street & Cross St', City, ST (always include the city and state)",
       "event": false,
       "date_text": "date or period as the source states it, or null",
       "date_is_estimate": false,

@@ -167,3 +167,30 @@ test('second pass runs when the first finds too few items', async () => {
   assert.equal(x.issue!.items.length + x.issue!.briefs.length, 4, 'merged and deduplicated');
   assert.equal(x.usage!.searches, 6);
 });
+
+test('item placement: a same-named street near the user is not accepted for another city', async () => {
+  const center: [number, number] = [-97.77, 30.25];
+  const calls: string[] = [];
+  const geocoder = { name: 'fake', async search(q: string) { calls.push(q); return [{ label: '12 Bedford Ave', city: 'Austin, TX, 78704', point: center, kind: 'address' as const, approx: false }]; } };
+  const app = { geocoder } as any;
+  assert.deepEqual(rep.namedPlaces('12 Bedford Ave, Brooklyn, NY 11211'), ['Brooklyn']);
+  assert.deepEqual(rep.namedPlaces('12 Bedford Ave'), []);
+  assert.equal(await rep.geocodeNear(app, '12 Bedford Ave, Brooklyn, NY 11211', center, 'Austin, TX'), null, 'Brooklyn address is not snapped to Austin');
+  assert.ok(calls.every((q) => !q.includes('Austin')), 'user city not glued onto another city');
+  assert.deepEqual(await rep.geocodeNear(app, '12 Bedford Ave, Austin, TX', center, 'Austin, TX'), center);
+  assert.deepEqual(await rep.geocodeNear(app, '12 Bedford Ave', center, 'Austin, TX'), center, 'no city given: user city is assumed');
+});
+
+test('recency: old openings are left out; ongoing projects need an update within a year', async () => {
+  const { assemble } = await import('../src/research/assemble.ts');
+  const { defaultPrefs } = await import('../src/domain/prefs.ts');
+  const now = Date.parse('2026-10-02T12:00:00Z');
+  const p = defaultPrefs([-96.77, 32.81], '2000 Greenville Ave, Dallas, TX', 'Lower Greenville');
+  const mk = (name: string, stage: string, published: string) => ({ name, category: 'food' as const, stage: stage as any, status: 's', what: 'w', address: 'a', evidence_type: 'news_report' as const, sources: [{ url: `https://n.example/${name}`, published }], coords: [-96.77, 32.81] as [number, number] });
+  const items = [mk('Old Opening', 'open', '2025-04-01'), mk('New Opening', 'open', '2026-09-20'), mk('Slow Project', 'construction', '2026-01-10'), mk('Stale Project', 'construction', '2025-06-01')];
+  const out = await assemble({ report: { summary: '', items }, seenUrls: new Map(items.map((i) => [i.sources[0].url, { title: i.name }])), usage: { searches: 0, inputTokens: 0, outputTokens: 0, costUsd: 0 } },
+    p, { geocode: async () => null, from: now - 60 * 86_400_000, to: now, tz: 'America/Chicago', fixture: false, limitations: [], recordUrls: new Set(), trustCoords: true });
+  const kept = [...out.issue.items, ...out.issue.briefs].map((i) => i.name).sort();
+  assert.deepEqual(kept, ['New Opening', 'Slow Project']);
+  assert.deepEqual(out.dropped.map((d) => d.reason), ['older than your time window', 'older than your time window']);
+});

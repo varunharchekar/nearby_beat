@@ -77,17 +77,32 @@ export function areaFromAddress(label: string): string | null {
   return zip ? `${street}, ZIP ${zip}` : street;
 }
 
-async function geocodeNear(app: App, address: string, center: Pt, city: string): Promise<Pt | null> {
+/** Localities the model wrote after the street (not states or ZIPs), e.g. ["Brooklyn"] for "12 Bedford Ave, Brooklyn, NY". */
+export function namedPlaces(address: string): string[] {
+  return address.split(',').slice(1).map((x) => x.trim().replace(/\s+\d{5}(-\d{4})?$/, '')).filter((x) => x && !/^\d{5}(-\d{4})?$/.test(x) && !/^[A-Z]{2}$/.test(x) && !/^(texas|usa|us|united states)$/i.test(x));
+}
+const stateOf = (s: string) => s.match(/,\s*([A-Z]{2})(?:\s+\d{5}(?:-\d{4})?)?\s*(?:,|$)/)?.[1] ?? null;
+
+export async function geocodeNear(app: App, address: string, center: Pt, city: string): Promise<Pt | null> {
+  const town = city.split(',')[0].trim().toLowerCase();
+  const named = namedPlaces(address);
   const tries = [address];
-  // Add the city when the model left it out, and try a cleaned-up variant (no suite, no trailing periods).
-  if (city && !address.toLowerCase().includes(city.split(',')[0].toLowerCase())) tries.push(`${address}, ${city}`);
+  // Add the user's city only when the model gave no locality at all; never glue it onto another city's address.
+  if (city && !named.length) tries.push(`${address}, ${city}`);
   const cleaned = address.replace(/\b(suite|ste|unit|#)\s*[\w-]+,?/gi, '').replace(/\.(?=\s|,|$)/g, '').replace(/\s+,/g, ',');
-  if (cleaned !== address) tries.push(cleaned, `${cleaned}, ${city}`);
+  if (cleaned !== address) tries.push(cleaned, ...(named.length ? [] : [`${cleaned}, ${city}`]));
+  const wantState = stateOf(address);
   for (const q of [...new Set(tries)]) {
     try {
       const r = await app.geocoder.search(q, { types: ['address', 'intersection'], proximity: center, limit: 1 });
       const hit = r.find((x) => x.kind === 'address' || x.kind === 'intersection');
-      if (hit) return hit.point;
+      if (!hit) continue;
+      const where = `${hit.label}, ${hit.city}`.toLowerCase();
+      // The match must be in the place the source named, not a same-named street near the user.
+      if (named.length && !named.some((n) => where.includes(n.toLowerCase())) && !named.some((n) => n.toLowerCase() === town)) continue;
+      const gotState = stateOf(`x, ${hit.city}`);
+      if (wantState && gotState && wantState !== gotState) continue;
+      return hit.point;
     } catch { /* try next */ }
   }
   return null;
