@@ -37,7 +37,8 @@ export class MapboxGeocoder implements Geocoder {
     const j: any = await r.json();
     return (j.features ?? []).map((f: any): GeoResult => {
       const p = f.properties ?? {};
-      const kind = p.feature_type === 'street' && / (and|&) /i.test(q) ? 'intersection' : (p.feature_type ?? 'place');
+      // Mapbox returns intersections ("A St & B St") as street features with intersection accuracy.
+      const kind = p.feature_type === 'street' && p.coordinates?.accuracy === 'intersection' ? 'intersection' : (p.feature_type ?? 'place');
       return {
         label: p.name_preferred ?? p.name ?? p.full_address,
         city: [p.context?.place?.name, p.context?.region?.region_code, p.context?.postcode?.name].filter(Boolean).join(', '),

@@ -1,5 +1,5 @@
 /** Drives the real HTTP server through the report journey with a cookie jar. */
-import { test } from 'node:test';
+import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
@@ -152,4 +152,17 @@ test('JSON API: draft token scopes reports', async () => {
     r = await u.req('GET', `/api/reports/${id}`, undefined, { headers: { 'x-draft-token': 'wrong' } });
     assert.equal(r.status, 404);
   } finally { await close(); }
+});
+
+test('address lookup errors explain what to do', async () => {
+  const { app, close } = await boot();
+  after(close);
+  const ob = await import('../src/services/onboarding.ts');
+  const census = { name: 'census', search: async () => [] };
+  const a = { ...app, geocoder: census } as any;
+  const { draft } = await ob.createDraft(a);
+  await assert.rejects(ob.searchAddress(a, draft, 'Greenville Ave & Ross Ave'), /Intersections need the Mapbox address lookup/);
+  await assert.rejects(ob.searchAddress(a, draft, 'Greenville Ave'), /full street address with city and state/);
+  const broken = { ...app, geocoder: { name: 'mapbox', search: async () => { throw new Error('Mapbox geocoding failed: 401'); } } } as any;
+  await assert.rejects(ob.searchAddress(broken, draft, '100 Main St, Dallas'), /isn’t responding/);
 });

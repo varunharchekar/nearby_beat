@@ -31,8 +31,14 @@ export async function loadDraft(app: App, token: string | undefined): Promise<Dr
 export async function searchAddress(app: App, d: Draft, q: string) {
   const query = q.trim();
   if (query.length < 3) throw new UserError('Enter an address, intersection or ZIP code.');
-  const c = await findAddress(app, query);
-  if (!c.length) throw new UserError('We couldn’t find that address. Add a city or ZIP code, or try a nearby intersection.');
+  let c;
+  try { c = await findAddress(app, query); }
+  catch (e) { app.log('geocoder.error', { provider: app.geocoder.name, error: (e as Error).message.slice(0, 200) }); throw new UserError('The address lookup service isn’t responding. Try again in a minute.'); }
+  if (!c.length) {
+    if (app.geocoder.name === 'census' && /&| and /i.test(query)) throw new UserError('Intersections need the Mapbox address lookup, which isn’t set up yet. Enter a street address with the city and state, like “2000 Greenville Ave, Dallas, TX”.');
+    if (app.geocoder.name === 'census') throw new UserError('We couldn’t find that address. Enter the full street address with city and state, like “2000 Greenville Ave, Dallas, TX”.');
+    throw new UserError('We couldn’t find that address. Add a city or ZIP code, or try a nearby intersection.');
+  }
   d.candidates = c;
   await app.store.saveDraft(d);
   return c;

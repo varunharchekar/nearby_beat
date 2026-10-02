@@ -64,7 +64,7 @@ export function landing(app: App, o: { error?: string; q?: string; radius?: numb
    <div class="hero-facts"><div><span class="mono">01</span><span>Enter an address and pick what you care about.</span></div><div><span class="mono">02</span><span>We research the web and public records for 3 to 5 minutes.</span></div><div><span class="mono">03</span><span>Read your report. Like it? Get it every week.</span></div></div></div>
   <form class="card stack" method="post" action="/start">
    ${errBox(o.error)}
-   <div class="field"><label for="q">Your address or nearest intersection</label><input type="text" id="q" name="q" autocomplete="street-address" required value="${esc(o.q ?? '')}" placeholder="Street address, city or ZIP"><span class="hint">Include the city or ZIP code. Intersections work too, like “Greenville Ave &amp; Ross Ave”.</span></div>
+   <div class="field"><label for="q">Your address or nearest intersection</label><input type="text" id="q" name="q" autocomplete="street-address" required value="${esc(o.q ?? '')}" placeholder="Street address, city or ZIP"><span class="hint">${app.geocoder.name === 'census' ? 'Enter a full street address with city and state, like “2000 Greenville Ave, Dallas, TX”.' : 'Include the city or ZIP code. Intersections work too, like “Greenville Ave &amp; Ross Ave, Dallas”.'}</span></div>
    ${app.cfg.mode === 'fixture' ? '<p class="hint">Fixture addresses: 100 Sample Street · Main Street (ambiguous) · Greenville Ave &amp; Mockingbird · 500 Example Road</p>' : ''}
    ${radiusField(o.radius ?? 1)}
    <button class="btn primary" type="submit">Start my report</button>
