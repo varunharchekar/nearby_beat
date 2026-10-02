@@ -66,7 +66,7 @@ export async function readBody(req: IncomingMessage, limit = 1_000_000): Promise
 }
 
 export function securityHeaders(res: ServerResponse, secure: boolean) {
-  res.setHeader('Content-Security-Policy', "default-src 'self'; img-src 'self' data: https://api.mapbox.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self'; frame-ancestors 'none'; form-action 'self' https://checkout.stripe.com https://billing.stripe.com; base-uri 'none'");
+  res.setHeader('Content-Security-Policy', "default-src 'self'; img-src 'self' data: https://api.mapbox.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self'; frame-ancestors 'none'; form-action 'self'; base-uri 'none'");
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'same-origin');
   res.setHeader('X-Frame-Options', 'DENY');

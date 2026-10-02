@@ -3,9 +3,7 @@
  * Personal location data is sealed (AES-256-GCM) before it reaches the database.
  */
 import type { ChangeEvent, Entity, SourceObservation } from '../domain/types.ts';
-import type { LedgerEntry } from '../domain/ledger.ts';
-import type { BillingRecord } from '../domain/billing.ts';
-import type { Account, AdapterRun, AuditEntry, Draft, Issue, Job, MagicLink, ObservationState, Preview, Snapshot, Store, WaitlistEntry } from './types.ts';
+import type { AdapterRun, AuditEntry, Draft, Job, MagicLink, ObservationState, Report, Store, SubscriptionRequest } from './types.ts';
 import { open, seal, sha256 } from '../lib/crypto.ts';
 
 export type QueryFn = (sql: string, params?: unknown[]) => Promise<{ rows: any[]; rowCount: number }>;
@@ -36,38 +34,44 @@ export class PgStore implements Store {
   async getDraftByToken(h: string) { const r = await this.q(`SELECT sealed FROM drafts WHERE token_hash = $1`, [h]); return r.rows[0] ? this.o<Draft>(r.rows[0].sealed) : null; }
   async getDraft(id: string) { const r = await this.q(`SELECT sealed FROM drafts WHERE id = $1`, [id]); return r.rows[0] ? this.o<Draft>(r.rows[0].sealed) : null; }
   async deleteExpiredDrafts(now: number) {
-    await this.q(`DELETE FROM previews WHERE account_id IS NULL AND draft_id IN (SELECT id FROM drafts WHERE expires_at <= $1)`, [now]);
+    await this.q(`DELETE FROM reports WHERE draft_id IN (SELECT id FROM drafts WHERE expires_at <= $1)`, [now]);
     const r = await this.q(`DELETE FROM drafts WHERE expires_at <= $1`, [now]);
     return r.rowCount;
   }
-  async savePreview(p: Preview) {
-    await this.q(`INSERT INTO previews (id, draft_id, account_id, prefs_key_hash, snapshot_id, status, partial, created_at, expires_at, sealed)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-      ON CONFLICT (id) DO UPDATE SET account_id = EXCLUDED.account_id, status = EXCLUDED.status, partial = EXCLUDED.partial, expires_at = EXCLUDED.expires_at, sealed = EXCLUDED.sealed`,
-    [p.id, p.draftId, p.accountId, sha256(p.prefsKey), p.snapshotId, p.status, p.down.length > 0, p.createdAt, p.expiresAt, this.s(p)]);
+  async saveReport(x: Report) {
+    const { prefs, ...rest } = x;
+    await this.q(`INSERT INTO reports (id, draft_id, visitor_key, prefs_key_hash, status, created_at, expires_at, data, sealed)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9)
+      ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status, expires_at = EXCLUDED.expires_at, data = EXCLUDED.data, sealed = EXCLUDED.sealed`,
+    [x.id, x.draftId, x.visitorKey, sha256(x.prefsKey), x.status, x.createdAt, x.expiresAt, J(rest), this.s(prefs)]);
   }
-  async getPreview(id: string) { const r = await this.q(`SELECT sealed FROM previews WHERE id = $1`, [id]); return r.rows[0] ? this.o<Preview>(r.rows[0].sealed) : null; }
-  async findReadyPreview(owner: string, key: string, snap: string) {
-    const r = await this.q(`SELECT sealed FROM previews WHERE (draft_id = $1 OR account_id = $1) AND prefs_key_hash = $2 AND snapshot_id = $3 AND status = 'ready' AND NOT partial ORDER BY created_at DESC LIMIT 1`, [owner, sha256(key), snap]);
-    return r.rows[0] ? this.o<Preview>(r.rows[0].sealed) : null;
+  private rep(row: any): Report { return { ...row.data, prefs: this.o(row.sealed) }; }
+  async getReport(id: string) { const r = await this.q(`SELECT data, sealed FROM reports WHERE id = $1`, [id]); return r.rows[0] ? this.rep(r.rows[0]) : null; }
+  async findReadyReport(draftId: string, key: string, since: number) {
+    const r = await this.q(`SELECT data, sealed FROM reports WHERE draft_id = $1 AND prefs_key_hash = $2 AND status = 'ready' AND created_at >= $3 ORDER BY created_at DESC LIMIT 1`, [draftId, sha256(key), since]);
+    return r.rows[0] ? this.rep(r.rows[0]) : null;
   }
-  async countPreviews(owner: string) { const r = await this.q(`SELECT count(*)::int AS n FROM previews WHERE draft_id = $1 OR account_id = $1`, [owner]); return Number(r.rows[0].n); }
-  async addWaitlist(w: WaitlistEntry) { await this.q(`INSERT INTO waitlist (id, email, area, consent_at, created_at) VALUES ($1,$2,$3,$4,$5)`, [w.id, w.email, w.area, w.consentAt, w.createdAt]); }
+  async countReports(f: { draftId?: string; visitorKey?: string; since: number }) {
+    const r = await this.q(`SELECT count(*)::int AS n FROM reports WHERE created_at >= $1 AND ($2::text IS NULL OR draft_id = $2) AND ($3::text IS NULL OR visitor_key = $3) AND status NOT IN ('failed','timeout','interrupted')`, [f.since, f.draftId ?? null, f.visitorKey ?? null]);
+    return Number(r.rows[0].n);
+  }
+  async listReports(limit = 100) { const r = await this.q(`SELECT data, sealed FROM reports ORDER BY created_at DESC LIMIT $1`, [limit]); return r.rows.map((x) => this.rep(x)); }
+  async interruptRunning(now: number) {
+    const r = await this.q(`SELECT data, sealed FROM reports WHERE status = 'running'`);
+    for (const row of r.rows) { const x = this.rep(row); x.status = 'interrupted'; x.error = 'The server restarted while this report was running.'; x.finishedAt = now; await this.saveReport(x); }
+    return r.rows.length;
+  }
 
-  async saveAccount(a: Account) {
-    const { prefs, ...rest } = a;
-    await this.q(`INSERT INTO accounts (id, email, created_at, email_state, data, sealed) VALUES ($1,$2,$3,$4,$5::jsonb,$6)
-      ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email, email_state = EXCLUDED.email_state, data = EXCLUDED.data, sealed = EXCLUDED.sealed`,
-    [a.id, a.email.toLowerCase(), a.createdAt, a.emailState, J(rest), this.s(prefs)]);
+  async saveSubscriptionRequest(x: SubscriptionRequest) {
+    const { prefs, email, ...rest } = x;
+    await this.q(`INSERT INTO subscription_requests (id, email, status, created_at, data, sealed) VALUES ($1,$2,$3,$4,$5::jsonb,$6)
+      ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status, data = EXCLUDED.data, sealed = EXCLUDED.sealed`,
+    [x.id, email.toLowerCase(), x.status, x.createdAt, J(rest), this.s(prefs)]);
   }
-  private acct(row: any): Account { return { ...row.data, prefs: this.o(row.sealed) }; }
-  async getAccount(id: string) { const r = await this.q(`SELECT data, sealed FROM accounts WHERE id = $1`, [id]); return r.rows[0] ? this.acct(r.rows[0]) : null; }
-  async getAccountByEmail(e: string) { const r = await this.q(`SELECT data, sealed FROM accounts WHERE email = $1`, [e.toLowerCase()]); return r.rows[0] ? this.acct(r.rows[0]) : null; }
-  async listAccounts() { const r = await this.q(`SELECT data, sealed FROM accounts ORDER BY created_at`); return r.rows.map((x) => this.acct(x)); }
-  async deleteAccount(id: string) {
-    await this.q(`DELETE FROM previews WHERE account_id = $1`, [id]);
-    await this.q(`DELETE FROM accounts WHERE id = $1`, [id]);
-  }
+  private req(row: any): SubscriptionRequest { return { ...row.data, email: row.email, prefs: this.o(row.sealed) }; }
+  async getSubscriptionRequest(id: string) { const r = await this.q(`SELECT email, data, sealed FROM subscription_requests WHERE id = $1`, [id]); return r.rows[0] ? this.req(r.rows[0]) : null; }
+  async listSubscriptionRequests(limit = 200) { const r = await this.q(`SELECT email, data, sealed FROM subscription_requests ORDER BY created_at DESC LIMIT $1`, [limit]); return r.rows.map((x) => this.req(x)); }
+
   async saveMagicLink(m: MagicLink) {
     await this.q(`INSERT INTO magic_links (token_hash, email, purpose, payload, expires_at, used_at, created_at) VALUES ($1,$2,$3,$4::jsonb,$5,$6,$7)`,
       [m.tokenHash, m.email, m.purpose, J(m.payload ?? {}), m.expiresAt, m.usedAt, m.createdAt]);
@@ -113,33 +117,6 @@ export class PgStore implements Store {
     const r = await this.q(`SELECT data FROM change_events WHERE ($1::text IS NULL OR review_state = $1) AND ($2::bigint IS NULL OR ${col} > $2) ORDER BY observed_at`, [f.review ?? null, f.since ?? null]);
     return r.rows.map((x) => x.data as ChangeEvent);
   }
-  async saveSnapshot(s: Snapshot) { await this.q(`INSERT INTO snapshots (id, at, change_ids) VALUES ($1,$2,$3::jsonb) ON CONFLICT (id) DO NOTHING`, [s.id, s.at, J(s.changeIds)]); }
-
-  async getIssueByKey(a: string, k: string) { const r = await this.q(`SELECT data FROM newsletter_issues WHERE account_id = $1 AND schedule_key = $2`, [a, k]); return r.rows[0]?.data ?? null; }
-  async getIssueByMessageId(m: string) { const r = await this.q(`SELECT data FROM newsletter_issues WHERE provider_message_id = $1`, [m]); return r.rows[0]?.data ?? null; }
-  async saveIssue(i: Issue) {
-    await this.q(`INSERT INTO newsletter_issues (id, account_id, schedule_key, sunday, status, provider_message_id, data) VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb)
-      ON CONFLICT (account_id, schedule_key) DO UPDATE SET status = EXCLUDED.status, provider_message_id = EXCLUDED.provider_message_id, data = EXCLUDED.data`,
-    [i.id, i.accountId, i.scheduleKey, i.sunday, i.status, i.providerMessageId, J(i)]);
-  }
-  async listIssues(a: string) { const r = await this.q(`SELECT data FROM newsletter_issues WHERE account_id = $1 ORDER BY sunday`, [a]); return r.rows.map((x) => x.data as Issue); }
-  async consumeCredit(a: string, e: LedgerEntry) {
-    const r = await this.q(`INSERT INTO entitlement_ledger (account_id, issue_key, credit_type, consumed_at, restored_at) VALUES ($1,$2,$3,$4,NULL)
-      ON CONFLICT (account_id, issue_key) DO UPDATE SET credit_type = EXCLUDED.credit_type, consumed_at = EXCLUDED.consumed_at, restored_at = NULL
-      WHERE entitlement_ledger.restored_at IS NOT NULL RETURNING issue_key`, [a, e.issueKey, e.creditType, e.consumedAt]);
-    return r.rowCount === 1;
-  }
-  async restoreCredit(a: string, k: string, at: number) { await this.q(`UPDATE entitlement_ledger SET restored_at = $3 WHERE account_id = $1 AND issue_key = $2 AND restored_at IS NULL`, [a, k, at]); }
-  async listLedger(a: string) {
-    const r = await this.q(`SELECT issue_key, credit_type, consumed_at, restored_at FROM entitlement_ledger WHERE account_id = $1 ORDER BY consumed_at`, [a]);
-    return r.rows.map((x) => ({ issueKey: x.issue_key, creditType: x.credit_type, consumedAt: Number(x.consumed_at), restoredAt: x.restored_at == null ? null : Number(x.restored_at) }));
-  }
-
-  async getBilling(a: string) { const r = await this.q(`SELECT data FROM billing WHERE account_id = $1`, [a]); return r.rows[0]?.data ?? null; }
-  async saveBilling(a: string, b: BillingRecord) {
-    await this.q(`INSERT INTO billing (account_id, customer_id, data) VALUES ($1,$2,$3::jsonb) ON CONFLICT (account_id) DO UPDATE SET customer_id = EXCLUDED.customer_id, data = EXCLUDED.data`, [a, b.customerId, J(b)]);
-  }
-  async findAccountIdByCustomer(c: string) { const r = await this.q(`SELECT account_id FROM billing WHERE customer_id = $1`, [c]); return r.rows[0]?.account_id ?? null; }
 
   async recordAdapterRun(x: AdapterRun) { await this.q(`INSERT INTO adapter_runs (adapter, at, ok, count, error) VALUES ($1,$2,$3,$4,$5)`, [x.adapter, x.at, x.ok, x.count, x.error]); }
   async listAdapterRuns(limit = 100) {

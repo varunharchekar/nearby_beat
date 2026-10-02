@@ -240,8 +240,8 @@ test('content ranks openings first, respects length and dedupes', () => {
   const c = buildContent(list, P(), W, AV);
   assert.equal(c.total, 3);
   assert.equal(c.main[0].id, list[1].id, 'one story per entity, highest ranked kept');
-  const brief = buildContent(Array.from({ length: 7 }, (_, i) => change({ dedupeKey: `z${i}`, entityId: `z${i}` })), P({ len: 'brief' }), W, AV);
-  assert.equal(brief.main.length, 4);
+  const brief = buildContent(Array.from({ length: 9 }, (_, i) => change({ dedupeKey: `z${i}`, entityId: `z${i}` })), P({ len: 'brief' }), W, AV);
+  assert.equal(brief.main.length, 6);
   assert.equal(brief.briefs.length, 0);
 });
 

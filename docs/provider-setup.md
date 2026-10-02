@@ -1,38 +1,63 @@
-# Provider setup checklist
+# Running a live test on your Mac
 
-Configuration names only; never commit secrets. `/status` shows what is still missing.
+About 15 minutes. Run every command from inside the `nearby_beat` folder.
 
-## Database
-- [ ] PostgreSQL 16 with PostGIS (`docker compose up -d db` locally, or a managed Postgres with the PostGIS extension).
-- [ ] `DATABASE_URL`, then `npm run migrate`. `002_spatial.sql` needs PostGIS and has not been run in CI yet; run it once and report any error.
-- [ ] `ADDRESS_ENCRYPTION_KEY` (`openssl rand -hex 32`). Losing it makes saved addresses unreadable; store it in your secret manager.
-- [ ] `SESSION_SECRET` (32+ random characters).
+## 1. Sign up (one time)
 
-## Geocoding and maps (Mapbox)
-- [ ] Create a public token restricted to your domain: `MAPBOX_TOKEN`.
-- [ ] Used for forward geocoding, neighborhood lookup and static basemap images. Without it the US Census geocoder handles street addresses only, and maps show the outline without streets.
+| Service | What it's for | Where | What to copy |
+|---|---|---|---|
+| **Anthropic API** (required) | The research | https://console.anthropic.com → sign up → **Billing**: add a card or credits (start with $10) → **API keys** → Create key | Key starting `sk-ant-` |
+| **Mapbox** (strongly recommended) | Placing items on the map, intersections, neighborhood names, street basemap | https://account.mapbox.com/auth/signup → **Access tokens** | Default public token, starting `pk.` |
+| **Docker Desktop** (recommended) | Database that survives restarts | https://www.docker.com/products/docker-desktop/ → install and open it | — |
+| Resend (optional) | Emailing subscription confirmation links | https://resend.com/signup with the email you'll test with → **API Keys** | Key starting `re_` |
 
-## Email (Resend)
-- [ ] Verify the sending domain; add SPF, DKIM and DMARC records.
-- [ ] `RESEND_API_KEY`, `EMAIL_FROM`.
-- [ ] Add a webhook to `https://<BASE_URL>/api/webhooks/email` for `email.sent`, `email.delivered`, `email.bounced`, `email.complained`, `email.failed`; set `RESEND_WEBHOOK_SECRET`.
-- [ ] Send a test issue to Gmail, Outlook and Apple Mail (desktop and mobile) and check rendering and the one-click unsubscribe.
+Without Mapbox, the free US Census geocoder places street addresses only. Items listed at intersections ("Greenville Ave & Belmont") get left out, so reports come out thinner.
 
-## Billing (Stripe) — Phase 3
-- [ ] Decide prices, currency, tax handling, refund terms and billing disclosures (PRD §17).
-- [ ] Create two recurring Prices (monthly, yearly): `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_ANNUAL`.
-- [ ] `STRIPE_SECRET_KEY` (start with test mode).
-- [ ] Webhook endpoint `https://<BASE_URL>/api/webhooks/billing` for `checkout.session.completed`, `customer.subscription.created|updated|deleted`, `invoice.paid`, `invoice.payment_failed`; set `STRIPE_WEBHOOK_SECRET`.
-- [ ] Turn on the Customer Portal (card updates, invoices, plan switching).
-- [ ] Run one full test-mode subscription: trial exhausted → checkout → webhook → paid issues → cancel at period end → term end.
+## 2. Configure
 
-## Sources
-- [ ] `npm run check:sources` and confirm each adapter returns records.
-- [ ] Optional `SOCRATA_APP_TOKEN` for data.texas.gov rate limits.
-- [ ] `RSS_FEEDS` only for feeds you have permission to use; record the license text in each entry.
+```sh
+git pull
+npm install
+cat > .env <<EOF
+NEARBY_MODE=live
+BASE_URL=http://localhost:3000
+SESSION_SECRET=$(openssl rand -hex 32)
+ADDRESS_ENCRYPTION_KEY=$(openssl rand -hex 32)
+ANTHROPIC_API_KEY=<sk-ant-...>
+MAPBOX_TOKEN=<pk....>
+DATABASE_URL=postgres://nearby:nearby@localhost:5432/nearby
+RESEND_API_KEY=<re_... or leave empty>
+EMAIL_FROM=Nearby <onboarding@resend.dev>
+OPERATOR_EMAILS=<your email>
+DEV_TOOLS=true
+EOF
+```
 
-## Operations
-- [ ] `OPERATOR_EMAILS` for console access.
-- [ ] Choose `REVIEW_MODE` (`all` for launch is the default).
-- [ ] Route `alert.*` log events to paging (stale sources, dead jobs, citation-check failures).
-- [ ] Publish the privacy policy, retention rules and terms (placeholders at `/legal/*`).
+Create `.env` once. Re-running the block makes a new encryption key, and saved data becomes unreadable.
+
+## 3. Start
+
+```sh
+docker compose up -d db      # wait ~10 seconds the first time
+npm run migrate              # Applied: 001_core.sql, 002_spatial.sql, 003_reports.sql
+npm run research:check       # one small live research run, ~1–2 minutes, a few cents
+npm start
+```
+
+`research:check` should end with `OK ... N items` and a few lines with real URLs. Paste me the output if it fails.
+
+## 4. Use it
+
+1. Open http://localhost:3000 and enter your address.
+2. Pick interests, area and depth, then click **Run my report**. Wait 3 to 5 minutes; the page shows each search as it happens.
+3. Read the report. Try **Make changes**, e.g. "Only food", then **Apply and research again**.
+4. Try **Subscribe**. The confirmation link arrives by email (or in **Dev tools → Outbox** without Resend).
+5. Open **Dev tools → Open the operator console → Reports** to see each run's searches, left-out items and estimated cost.
+
+Limits while testing: 3 reports per search and 3 per day per visitor. Raise them in `.env` (`REPORTS_PER_DRAFT`, `REPORTS_PER_VISITOR_PER_DAY`) and restart.
+
+## Starting over
+
+```sh
+docker compose down -v && docker compose up -d db && npm run migrate
+```

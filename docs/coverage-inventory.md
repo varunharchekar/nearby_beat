@@ -1,6 +1,6 @@
-# Coverage inventory: Dallas pilot
+# Official record feeds
 
-Checked October 1, 2026. Every family the PRD lists, whether it works, and why.
+Reports are researched live on the web for every address. On top of that, these official feeds are read ahead of time and handed to the research as primary records. Checked October 1, 2026; they cover Dallas only.
 
 | Family | Tier | Status | Source and access | Notes |
 |---|---|---|---|---|

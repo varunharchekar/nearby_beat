@@ -4,10 +4,9 @@
  */
 import type { App } from '../app.ts';
 import type { Job } from '../store/types.ts';
-import { DAY, localDateKey, MIN, nextSunday } from '../domain/time.ts';
+import { DAY, MIN } from '../domain/time.ts';
 import { newId } from '../lib/crypto.ts';
 import { createReminders, refreshAdapter } from '../services/pipeline.ts';
-import { dispatchSunday, reconcileDelivery } from '../services/dispatch.ts';
 
 const MAX_ATTEMPTS = 4;
 const backoff = (attempt: number) => Math.min(60, 2 ** attempt) * MIN;
@@ -21,11 +20,6 @@ export const HANDLERS: Record<string, Handler> = {
     if (!r.ok) throw new Error(r.error ?? 'refresh failed');
   },
   async reminders(app) { await createReminders(app); },
-  async dispatch(app, p) {
-    const res = await dispatchSunday(app, p.sunday);
-    const failed = res.filter((r) => r.outcome === 'failed' || r.outcome === 'error');
-    if (failed.length) throw new Error(`${failed.length} send(s) failed; retrying those issue keys`);
-  },
   async retention(app) {
     const n = await app.store.deleteExpiredDrafts(app.clock.now());
     if (n) app.log('retention.drafts_deleted', { count: n });
@@ -49,21 +43,6 @@ export async function schedulerTick(app: App) {
   await app.store.enqueueJob({ id: newId('job'), type: 'reminders', key: `reminders:${hour}`, payload: {}, runAt: now });
   await app.store.enqueueJob({ id: newId('job'), type: 'retention', key: `retention:${hour}`, payload: {}, runAt: now });
   await app.store.enqueueJob({ id: newId('job'), type: 'coverage_monitor', key: `coverage:${hour}`, payload: {}, runAt: now });
-  const last = (await app.store.kvGet<number>('dispatch:scheduled')) ?? now - 1;
-  let s = nextSunday(last, app.cfg.tz);
-  while (s <= now) {
-    await app.store.enqueueJob({ id: newId('job'), type: 'dispatch', key: `dispatch:${localDateKey(s, app.cfg.tz)}`, payload: { sunday: s }, runAt: s });
-    await app.store.kvSet('dispatch:scheduled', s);
-    s = nextSunday(s, app.cfg.tz);
-  }
-  if (app.cfg.mode === 'fixture' && (await app.store.kvGet<boolean>('dev:autoDeliver')) !== false) await autoDeliverFixture(app);
-}
-
-/** Fixture mode has no real provider, so accepted messages are marked delivered. */
-async function autoDeliverFixture(app: App) {
-  for (const a of await app.store.listAccounts()) for (const i of await app.store.listIssues(a.id)) {
-    if (i.status === 'accepted' && i.providerMessageId) await reconcileDelivery(app, i.providerMessageId, 'delivered');
-  }
 }
 
 export async function runJobs(app: App, limit = 50): Promise<number> {

@@ -1,8 +1,8 @@
 {
   "name": "nearby",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
-  "description": "Weekly email about meaningful physical changes near a subscriber's address (Phase 2: grounded Dallas pilot).",
+  "description": "On-demand research report of meaningful physical changes near an address, with a hand-off to a separate subscription service.",
   "type": "module",
   "engines": { "node": ">=22.18" },
   "scripts": {
@@ -12,7 +12,7 @@
     "typecheck": "tsc -p tsconfig.json",
     "migrate": "node --env-file-if-exists=.env src/cli.ts migrate",
     "refresh": "node --env-file-if-exists=.env src/cli.ts refresh",
-    "dispatch": "node --env-file-if-exists=.env src/cli.ts dispatch",
+    "research:check": "node --env-file-if-exists=.env src/cli.ts research-check",
     "check:sources": "node --env-file-if-exists=.env src/cli.ts check-sources"
   },
   "dependencies": {

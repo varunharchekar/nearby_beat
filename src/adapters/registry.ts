@@ -29,6 +29,8 @@ export function buildRegistry(cfg: Config): Registry {
     return { adapters: fx, available: new Set(fx.map((a) => a.family)), reasons: Object.fromEntries(FAMILIES.filter((f) => !fx.some((a) => a.family === f.id)).map((f) => [f.id, 'No fixture data for this source.'])) };
   }
   const adapters: SourceAdapter[] = [tabcApplications(), tabcLicenses(), legistarZoning(), ...cfg.rssFeeds.map(rssAdapter)];
+  // Live research searches the web for every source family; the adapters add official Dallas records on top.
+  if (cfg.research.provider === 'anthropic') return { adapters, available: new Set(FAMILIES.map((f) => f.id)), reasons: {} };
   const available = new Set([...adapters.map((a) => a.family), ...MANUAL_FAMILIES]);
   const reasons: Record<string, string> = {};
   for (const f of FAMILIES) if (!available.has(f.id)) reasons[f.id] = f.id === 'local_reporting' ? 'No licensed news feeds configured (RSS_FEEDS).' : UNAVAILABLE_REASONS[f.id] ?? 'No working adapter.';

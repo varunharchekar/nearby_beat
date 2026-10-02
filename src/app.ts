@@ -2,7 +2,7 @@ import type { Config } from './config.ts';
 import type { Store } from './store/types.ts';
 import type { Geocoder } from './providers/geocoder.ts';
 import type { Mailer } from './providers/email.ts';
-import type { BillingProvider } from './providers/billing.ts';
+import type { Researcher } from './research/types.ts';
 import type { Registry } from './adapters/registry.ts';
 
 export interface Clock { now(): number; offset: number }
@@ -13,7 +13,7 @@ export interface App {
   clock: Clock;
   geocoder: Geocoder;
   mailer: Mailer;
-  billing: BillingProvider | null;
+  researcher: Researcher | null;
   registry: Registry;
   fetch: typeof fetch;
   log: (event: string, fields?: Record<string, string | number | boolean | null | undefined>) => void;

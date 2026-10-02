@@ -7,7 +7,7 @@ import { catName, depthLabel, LENS } from './prefs.ts';
 import { DAY, fmtDate } from './time.ts';
 import { metersToMiles } from './geo.ts';
 
-export interface EvidenceRef { id: string; title: string; url: string; recordId: string; family: string; publishedAt: number; observedAt: number }
+export interface EvidenceRef { id: string; title: string; url: string; recordId: string; family: string; publishedAt: number; observedAt: number; publisher?: string }
 export interface IssueItem {
   changeId: string; name: string; cat: string; type: ChangeEvent['type']; status: string; summary: string; why?: string;
   before?: string; after?: string; date: DateInfo | null; place: string; distanceMi: number; partly: boolean; late: boolean;

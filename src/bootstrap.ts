@@ -13,18 +13,17 @@ import { CensusGeocoder, cached, FixtureGeocoder, MapboxGeocoder } from './provi
 import type { Geocoder } from './providers/geocoder.ts';
 import { ConsoleMailer, ResendMailer } from './providers/email.ts';
 import type { Mailer } from './providers/email.ts';
-import { FakeBilling, StripeBilling } from './providers/billing.ts';
-import type { BillingProvider } from './providers/billing.ts';
+import { AnthropicResearcher } from './research/anthropic.ts';
+import { FixtureResearcher } from './research/fixture.ts';
+import type { Researcher } from './research/types.ts';
 import { DAY } from './domain/time.ts';
-
-export const FIXTURE_WEBHOOK_SECRET = 'whsec_fixture_only_not_secret';
 
 export function fixtureGeocoder(): FixtureGeocoder {
   const f = fileURLToPath(new URL('../data/fixture-geocoder.json', import.meta.url));
   return new FixtureGeocoder(JSON.parse(readFileSync(f, 'utf8')).entries);
 }
 
-export async function buildApp(cfg: Config, over: Partial<Pick<App, 'store' | 'geocoder' | 'mailer' | 'billing' | 'fetch'>> & { quiet?: boolean } = {}): Promise<App & { close: () => Promise<void> }> {
+export async function buildApp(cfg: Config, over: Partial<Pick<App, 'store' | 'geocoder' | 'mailer' | 'researcher' | 'fetch'>> & { quiet?: boolean } = {}): Promise<App & { close: () => Promise<void> }> {
   let close = async () => {};
   let store: Store;
   if (over.store) store = over.store;
@@ -36,11 +35,13 @@ export async function buildApp(cfg: Config, over: Partial<Pick<App, 'store' | 'g
 
   const geocoder: Geocoder = over.geocoder ?? cached(cfg.geocoder.provider === 'fixture' ? fixtureGeocoder() : cfg.geocoder.provider === 'mapbox' ? new MapboxGeocoder(cfg.geocoder.mapboxToken!) : new CensusGeocoder());
   const mailer: Mailer = over.mailer ?? (cfg.email.provider === 'resend' && cfg.email.from ? new ResendMailer(cfg.email.apiKey!, cfg.email.from) : new ConsoleMailer());
-  let billing: BillingProvider | null = over.billing ?? null;
-  if (!over.billing) {
-    const b = cfg.billing;
-    if (b.provider === 'stripe' && b.secretKey && b.webhookSecret && b.priceMonthly && b.priceAnnual) billing = new StripeBilling({ key: b.secretKey, webhookSecret: b.webhookSecret, priceMonthly: b.priceMonthly, priceAnnual: b.priceAnnual });
-    else if (cfg.mode === 'fixture') billing = new FakeBilling(FIXTURE_WEBHOOK_SECRET);
+  let researcher: Researcher | null = over.researcher !== undefined ? over.researcher : null;
+  if (over.researcher === undefined) {
+    if (cfg.research.provider === 'anthropic') researcher = new AnthropicResearcher({ apiKey: cfg.research.apiKey!, model: cfg.research.model, fetch: over.fetch });
+    else if (cfg.research.provider === 'fixture') researcher = new FixtureResearcher(async () => {
+      const changes = await store.listChanges();
+      return { changes, observations: await store.getObservations(changes.flatMap((c) => c.evidenceIds)) };
+    }, cfg.research.fixtureStepMs);
   }
 
   // Dev clock: fixture mode can move time forward to play out weeks of changes.
@@ -50,6 +51,7 @@ export async function buildApp(cfg: Config, over: Partial<Pick<App, 'store' | 'g
     if (!anchor) { anchor = Date.now() - 30 * DAY; await store.kvSet('fixture:anchor', anchor); }
     setFixtureAnchor(anchor);
   }
-  const app: App = { cfg, store, clock, geocoder, mailer, billing, registry: buildRegistry(cfg), fetch: over.fetch ?? fetch, log: makeLogger(over.quiet) };
+  await store.interruptRunning(clock.now());
+  const app: App = { cfg, store, clock, geocoder, mailer, researcher, registry: buildRegistry(cfg), fetch: over.fetch ?? fetch, log: makeLogger(over.quiet) };
   return { ...app, close };
 }

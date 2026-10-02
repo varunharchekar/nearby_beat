@@ -7,6 +7,7 @@ import type { GeoCandidate } from '../store/types.ts';
 import { newId } from '../lib/crypto.ts';
 
 export function inCoverage(app: App, p: Pt): boolean {
+  if (!app.cfg.coverage) return p[0] >= -179 && p[0] <= -66 && p[1] >= 18 && p[1] <= 72; // United States, roughly
   const [x0, y0, x1, y1] = app.cfg.coverage.bbox;
   return p[0] >= x0 && p[0] <= x1 && p[1] >= y0 && p[1] <= y1;
 }
@@ -17,6 +18,7 @@ export async function findAddress(app: App, q: string, near?: Pt): Promise<GeoCa
 }
 
 export function centerOf(app: App): Pt {
+  if (!app.cfg.coverage) return [-96.8, 32.8];
   const [x0, y0, x1, y1] = app.cfg.coverage.bbox;
   return [(x0 + x1) / 2, (y0 + y1) / 2];
 }

@@ -7,7 +7,7 @@ import { buildRouter } from './routes.ts';
 import { layout, simplePage } from './views.ts';
 
 /** Paths that legitimately receive cross-site POSTs (provider webhooks, one-click unsubscribe from mail clients). */
-const CROSS_SITE_OK = [/^\/api\/webhooks\//, /^\/u\//];
+const CROSS_SITE_OK = [/^\/api\/subscription-requests\//];
 
 export function sameOrigin(c: Pick<Ctx, 'req'>, baseUrl: string): boolean {
   const h = c.req.headers;
@@ -50,7 +50,7 @@ export function makeHandler(app: App) {
           return isApi ? sendJson(c, 403, { error: 'Cross-site request blocked.' }) : send(c, 403, layout(app, { title: 'Blocked', body: simplePage('Request blocked', '<p>This form must be sent from Nearby itself. Go back and try again.</p>') }));
         }
       }
-      if (/^\/(start|account|auth|login|ops|dev|u\/)/.test(url.pathname)) res.setHeader('Cache-Control', 'no-store');
+      if (/^\/(start|subscribe|ops|dev)/.test(url.pathname)) res.setHeader('Cache-Control', 'no-store');
       await m.h(c);
     } catch (e) {
       const err = e as Error & { status?: number };

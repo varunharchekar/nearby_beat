@@ -38,9 +38,9 @@ export const presetFams = (p: Tier) => FAMILIES.filter((f) => PRESETS[p].tiers.i
 export const presetMap = (p: Tier) => Object.fromEntries(FAMILIES.map((f) => [f.id, PRESETS[p].tiers.includes(f.tier)]));
 
 export const LENS = {
-  brief: { name: 'Brief', main: 4, brief: 0 },
-  standard: { name: 'Standard', main: 8, brief: 5 },
-  detailed: { name: 'Detailed', main: 12, brief: 5 },
+  brief: { name: 'Brief', main: 6, brief: 0 },
+  standard: { name: 'Standard', main: 12, brief: 8 },
+  detailed: { name: 'Detailed', main: 20, brief: 10 },
 } as const;
 
 export const STAGE_RANK: Record<Stage, number> = { signal: 0, announced: 1, filed: 1, approved: 2, construction: 3, open: 4, closed: 4 };
