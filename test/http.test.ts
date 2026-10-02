@@ -74,9 +74,7 @@ test('HTTP journey: address → filters → research → report → subscribe �
     r = await u.post('/start/interests', { next: '1' });
     assert.equal(r.status, 422, 'zero categories blocked');
     r = await u.post('/start/interests', { cats: ['food', 'shops', 'events', 'public', 'dev'], next: '1' });
-    assert.equal(r.location, '/start/area');
-    r = await u.post('/start/area', { action: 'next' });
-    assert.equal(r.location, '/start/depth');
+    assert.equal(r.location, '/start/depth', 'no separate radius/area step');
     r = await u.post('/start/depth', { preset: 'bal', len: 'standard', next: '1' });
     if (r.status === 422) r = await u.post('/start/depth', { preset: 'bal', len: 'standard', ack: '1', next: '1' });
     assert.equal(r.location, '/start/report');

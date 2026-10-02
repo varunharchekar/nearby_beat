@@ -153,7 +153,7 @@ export function buildRouter(app: App): Router {
     await app.store.saveDraft(d);
     if (one(c.form.next)) {
       if (!p.cats.length) return page(c, { title: 'Interests', body: V.interestsPage(d, await maxOf(d), 'Choose at least one kind of change to continue.'), nav: 'flow' }, 422);
-      return redirect(c, '/start/area');
+      return redirect(c, '/start/depth');
     }
     redirect(c, '/start/interests');
   }));

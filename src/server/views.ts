@@ -39,8 +39,8 @@ const errBox = (e: string | null | undefined) => (e ? `<div class="note bad flas
 const basemap = (app: App) => mapboxStatic(app.cfg.geocoder.mapboxToken);
 
 /* ---------------- onboarding ---------------- */
-const STEPS = ['Location', 'Interests', 'Area', 'Depth', 'Report'];
-const STEP_URL = ['/start', '/start/interests', '/start/area', '/start/depth', '/start/report'];
+const STEPS = ['Location', 'Interests', 'Depth', 'Report'];
+const STEP_URL = ['/start', '/start/interests', '/start/depth', '/start/report'];
 function rail(step: number, max: number) {
   return `<nav class="rail" aria-label="Report steps"><ol>${STEPS.map((s, i) => {
     const k = i + 1;
@@ -50,10 +50,10 @@ function rail(step: number, max: number) {
 }
 export function maxStep(d: Draft | null): number {
   if (!d?.prefs) return 1;
-  return d.currentReportId ? 5 : 4;
+  return d.currentReportId ? 4 : 3;
 }
 const flow = (step: number, max: number, body: string) => `<div class="flow">${rail(step, max)}<section class="work">${body}</section></div>`;
-const head = (step: number, title: string, sub = '') => `<div class="stephead"><span class="eyebrow">Step ${step} of 5</span><h2>${title}</h2>${sub ? `<p class="muted">${sub}</p>` : ''}</div>`;
+const head = (step: number, title: string, sub = '') => `<div class="stephead"><span class="eyebrow">Step ${step} of 4</span><h2>${title}</h2>${sub ? `<p class="muted">${sub}</p>` : ''}</div>`;
 
 function radiusField(r: number, auto = false) {
   return `<fieldset class="stack-s" style="border:0;padding:0;margin:0"><legend class="lbl" style="margin-bottom:6px">Radius</legend><div class="row">${RADII.map((x) => `<label class="opt" style="padding:8px 12px"><input type="radio" name="radius" value="${x}" ${r === x ? 'checked' : ''} ${auto ? 'data-autosubmit' : ''}><b>${x} mi</b></label>`).join('')}</div><span class="hint">Straight-line distance from your pin.</span></fieldset>`;
@@ -104,7 +104,7 @@ export function locationDone(app: App, d: Draft, max: number) {
   const p = d.prefs!;
   return flow(1, max, `${head(1, 'Your location')}
   <div class="area-layout"><div class="mapwrap">${mapSvg(areaOf(p), { label: `Your ${p.radiusMi}-mile area`, basemap: basemap(app) })}</div>
-  <div class="stack"><div class="panel stack-s"><span class="lbl">Confirmed location</span><p><b>${esc(p.addressLabel)}</b></p><p class="hint">Area name: near ${esc(p.areaName)}. Distances are measured from this pin.</p><div><a class="btn sm" href="/">Change location</a></div></div>
+  <div class="stack"><div class="panel stack-s"><span class="lbl">Confirmed location</span><p><b>${esc(p.addressLabel)}</b></p><p class="hint">Area name: near ${esc(p.areaName)}. Distances are measured from this pin.</p><div class="btnrow"><a class="btn sm" href="/">Change location</a><a class="btn sm ghost" href="/start/area">Customize the area on a map</a></div></div>
   <form method="post" action="/start/radius" class="stack">${radiusField(p.radiusMi, true)}<div class="stepfoot"><button class="btn sm">Update radius</button><button class="btn primary" name="next" value="1">Continue</button></div></form></div></div>`);
 }
 
@@ -124,7 +124,7 @@ export function areaPage(app: App, d: Draft, max: number, sum: { sqMi: number; o
   const custom = p.areaMode === 'custom';
   const a = areaOf(p);
   const shapeLi = (s: Prefs['inc'][number], kind: 'inc' | 'exc', i: number) => `<li><span class="row" style="gap:8px"><span class="sw ${kind}"></span><span>${kind === 'inc' ? 'Include' : 'Exclude'}: ${esc(s.label)}</span></span><form method="post" action="/start/area" class="inline"><input type="hidden" name="action" value="remove"><input type="hidden" name="kind" value="${kind}"><input type="hidden" name="index" value="${i}"><button class="btn ghost sm" aria-label="Remove ${esc(s.label)}">Remove</button></form></li>`;
-  return flow(3, max, `${head(3, 'Include everything within this radius?')}
+  return flow(1, max, `${head(1, 'Customize your area')}
   ${errBox(error)}
   <form method="post" action="/start/area" class="row"><input type="hidden" name="action" value="mode">
    <label class="opt"><input type="radio" name="mode" value="radius" ${!custom ? 'checked' : ''} data-autosubmit><b>Yes, use my radius</b></label>
@@ -153,7 +153,7 @@ export function areaPage(app: App, d: Draft, max: number, sum: { sqMi: number; o
     <div class="btnrow"><button type="submit" class="btn sm" name="mode" value="include" disabled>Save as inclusion</button><button type="submit" class="btn sm" name="mode" value="exclude">Save as exclusion</button><button type="button" class="btn sm ghost" id="draw-clear">Clear</button></div></form></div></details>
    ${p.inc.length || p.exc.length ? `<div class="stack-s"><span class="lbl">Applied shapes</span><ul class="shapes">${p.inc.map((s, i) => shapeLi(s, 'inc', i)).join('')}${p.exc.map((s, i) => shapeLi(s, 'exc', i)).join('')}</ul></div>` : ''}
    ` : ''}
-   <div class="stepfoot"><a class="btn" href="/start/interests">Back</a><form method="post" action="/start/area"><input type="hidden" name="action" value="next"><button class="btn primary">Continue</button></form></div>
+   <div class="stepfoot"><a class="btn" href="${d.currentReportId ? '/start/report' : '/start'}">Back</a><form method="post" action="/start/area"><input type="hidden" name="action" value="next"><button class="btn primary">Continue</button></form></div>
   </div></div>`);
 }
 
@@ -161,19 +161,19 @@ export function depthPage(app: App, d: Draft, max: number, error?: string) {
   const p = d.prefs!;
   if (app.cfg.research.sources === 'articles') {
     const n = app.cfg.research.maxSearches;
-    return flow(4, max, `${head(4, 'How far should we dig?', 'We search recent local news, blogs and business announcements. More searches can find more, but they take longer.')}
+    return flow(3, max, `${head(3, 'How far should we dig?', 'We search recent local news, blogs and business announcements. More searches can find more, but they take longer.')}
   ${errBox(error)}
   <form method="post" action="/start/depth" class="stack">
   <fieldset class="grid3" style="border:0;padding:0;margin:0"><legend class="sr">Research depth</legend>${(['ann', 'bal', 'deep'] as const).map((k) => `<label class="opt"><input type="radio" name="preset" value="${k}" ${p.preset === k ? 'checked' : ''}><span><b>${ARTICLE_PRESETS[k].name}${k === 'bal' ? ' <span class="pill">Recommended</span>' : ''}</b><span class="hint">${esc(ARTICLE_PRESETS[k].desc)} Up to ${n[k]} searches.</span></span></label>`).join('')}</fieldset>
   <div class="note small">Reports are based on articles and announcements. They don't check permit, zoning or other government records.</div>
   <fieldset class="stack-s" style="border:0;padding:0;margin:0"><legend class="lbl" style="margin-bottom:6px">Report length</legend><p class="hint">Every item keeps its source, even in Brief.</p>
   <div class="row">${Object.entries(LENS).map(([k, v]) => `<label class="opt" style="padding:8px 12px"><input type="radio" name="len" value="${k}" ${p.len === k ? 'checked' : ''}><span><b>${v.name}</b><span class="hint">Up to ${v.main} items${v.brief ? ` + ${v.brief} brief` : ''}</span></span></label>`).join('')}</div></fieldset>
-  <div class="stepfoot"><a class="btn" href="/start/area">Back</a><div class="btnrow"><button class="btn" name="save" value="1">Save</button><button class="btn primary" name="next" value="1">Run my report</button></div></div>
+  <div class="stepfoot"><a class="btn" href="/start/interests">Back</a><div class="btnrow"><button class="btn" name="save" value="1">Save</button><button class="btn primary" name="next" value="1">Run my report</button></div></div>
   <p class="hint">Research takes about 3 to 5 minutes. You can leave the page and come back.</p></form>`);
   }
   const lab = depthLabel(p);
   const un = unavailableSelected(p, app.registry.available);
-  return flow(4, max, `${head(4, 'How far should we dig?', 'Depth changes which kinds of sources we search and how many searches we run. It does not promise more stories or more certainty.')}
+  return flow(3, max, `${head(3, 'How far should we dig?', 'Depth changes which kinds of sources we search and how many searches we run. It does not promise more stories or more certainty.')}
   ${errBox(error)}
   <form method="post" action="/start/depth" class="stack">
   <fieldset class="grid3" style="border:0;padding:0;margin:0"><legend class="sr">Research depth</legend>${(['ann', 'bal', 'deep'] as const).map((k) => `<label class="opt"><input type="radio" name="preset" value="${k}" ${lab === PRESETS[k].name ? 'checked' : ''}><span><b>${PRESETS[k].name}${k === 'bal' ? ' <span class="pill">Recommended</span>' : ''}</b><span class="hint">${esc(PRESETS[k].desc)}</span></span></label>`).join('')}</fieldset>
@@ -185,7 +185,7 @@ export function depthPage(app: App, d: Draft, max: number, error?: string) {
   <div class="note fix small">How we label things: a permit filing is not an approval, an approval is not construction, and a hiring notice is not an opening date.</div>
   <fieldset class="stack-s" style="border:0;padding:0;margin:0"><legend class="lbl" style="margin-bottom:6px">Report length</legend><p class="hint">Separate from depth. Every item keeps its source, even in Brief.</p>
   <div class="row">${Object.entries(LENS).map(([k, v]) => `<label class="opt" style="padding:8px 12px"><input type="radio" name="len" value="${k}" ${p.len === k ? 'checked' : ''}><span><b>${v.name}</b><span class="hint">Up to ${v.main} items${v.brief ? ` + ${v.brief} brief` : ''}</span></span></label>`).join('')}</div></fieldset>
-  <div class="stepfoot"><a class="btn" href="/start/area">Back</a><div class="btnrow"><button class="btn" name="save" value="1">Save</button><button class="btn primary" name="next" value="1">Run my report</button></div></div>
+  <div class="stepfoot"><a class="btn" href="/start/interests">Back</a><div class="btnrow"><button class="btn" name="save" value="1">Save</button><button class="btn primary" name="next" value="1">Run my report</button></div></div>
   <p class="hint">Research takes about 3 to 5 minutes. You can leave the page and come back.</p></form>`);
 }
 
@@ -210,7 +210,7 @@ export function progressPage(app: App, d: Draft, r: Report, now: number) {
   const idx = STAGE_TEXT.findIndex(([k]) => k === r.progress.stage);
   const secs = Math.max(0, Math.round((now - r.createdAt) / 1000));
   const q = r.progress.queries;
-  return flow(5, 5, `${head(5, 'Researching your area', `${esc(areaLabelOf(r.prefs))} · usually 3 to 5 minutes`)}
+  return flow(4, 4, `${head(4, 'Researching your area', `${esc(areaLabelOf(r.prefs))} · usually 3 to 5 minutes`)}
   <div class="card stack" role="status" aria-live="polite">
    <ol class="prog" style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:10px">${STAGE_TEXT.slice(0, 4).map(([, t], i) => `<li><span class="dot ${i < idx ? 'ok' : i === idx ? 'on' : ''}"></span>${esc(t)}</li>`).join('')}</ol>
    ${r.progress.note ? `<p class="hint">${esc(r.progress.note)}</p>` : ''}
@@ -291,7 +291,7 @@ export function reportPage(app: App, d: Draft, r: Report, o: { error?: string; s
      <div class="field"><label for="rl">Length</label><select id="rl" name="len">${lenOpts}</select></div></div>
     <div><button class="btn primary sm">Run again</button></div></form>
    ${o.budget ? `<p class="hint">${esc(o.budget)}</p>` : ''}</div>`;
-  return flow(5, 5, `${errBox(o.error)}
+  return flow(4, 4, `${errBox(o.error)}
   ${stale ? `<div class="note warn stack-s"><p><b>Your settings changed since this report.</b> Run it again to see them.</p>${diffTable(diffPrefs(r.prefs, p, app.cfg.research.sources))}<form method="post" action="/start/report"><input type="hidden" name="action" value="run"><button class="btn primary sm">Research again</button></form></div>` : ''}
   ${main}
   <div class="grid2">${subscribe}${refine}</div>`);
