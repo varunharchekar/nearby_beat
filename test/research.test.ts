@@ -172,3 +172,23 @@ test('area is described by street and ZIP when no neighborhood is known', async 
   assert.equal(areaFromAddress('2000 GREENVILLE AVE, DALLAS, TX, 75206'), 'Greenville Ave, ZIP 75206');
   assert.equal(areaFromAddress('Greenville Ave & Ross Ave, Dallas, TX 75206'), 'Greenville Ave & Ross Ave, ZIP 75206');
 });
+
+test('researcher asks the model to keep going when it stops early with searches left', async () => {
+  const bodies: any[] = [];
+  const one = { ...REPORT, items: [REPORT.items[0]] };
+  const two = { ...REPORT, items: [{ ...REPORT.items[0], name: 'Second Cafe', address: '2000 Greenville Ave, Dallas, TX' }] };
+  const responses = [
+    turn('end_turn', { query: 'q1', text: `<report>${JSON.stringify(one)}</report>` }),
+    turn('end_turn', { query: 'q2', text: `<report>${JSON.stringify(two)}</report>` }),
+    turn('end_turn', { query: 'q3', text: `<report>${JSON.stringify(two)}</report>` }),
+  ];
+  const fakeFetch = (async (_u: any, init: any) => { bodies.push(JSON.parse(init.body)); return new Response(streamOf(responses.shift()!), { status: 200 }); }) as typeof fetch;
+  const r = new AnthropicResearcher({ apiKey: 'k', model: 'claude-haiku-4-5-20251001', fetch: fakeFetch });
+  const req: ResearchRequest = { areaName: 'Lower Greenville', city: 'Dallas, TX', center: [-96.77, 32.81], radiusMi: 1, includeNotes: [], excludeNotes: [], cats: ['food'], evAll: false, depth: 'bal', depthLabel: 'Standard', statusMin: '', maxItems: 20, minItems: 15, lookbackDays: 60, today: '2026-10-02', maxSearches: 20, sources: 'articles', maxFetches: 0, fetchMaxTokens: 1000, records: [] };
+  const res = await r.run(req, () => {}, new AbortController().signal);
+  assert.equal(bodies.length, 3, 'two nudges, then stop');
+  assert.match(bodies[1].messages.at(-1).content, /using 1 of 20 searches/);
+  assert.equal(bodies[1].tools[0].max_uses, 19, 'remaining search budget');
+  assert.deepEqual(res.report.items.map((i) => i.name).sort(), ['Corsaire', 'Second Cafe'], 'earlier items kept even if the final list omits them');
+  assert.equal(res.usage.searches, 3);
+});

@@ -2,7 +2,7 @@
  * Claude Messages API researcher: server-side web search and web fetch, streamed so progress can be shown.
  * Docs: platform.claude.com/docs/en/agents-and-tools/tool-use/web-search-tool and .../web-fetch-tool
  */
-import type { Progress, ResearchRequest, ResearchResult, Researcher, Usage } from './types.ts';
+import type { Progress, RawReport, ResearchRequest, ResearchResult, Researcher, Usage } from './types.ts';
 import { parseReport, RECORD_DOMAINS, systemPrompt, userPrompt } from './prompt.ts';
 
 /** USD per million tokens [input, output]. Unknown models fall back to Sonnet pricing. */
@@ -89,6 +89,17 @@ export async function readStream(body: ReadableStream<Uint8Array>, onBlock: (b: 
   return msg;
 }
 
+/** Union of two reports; items are matched on name and address so a repeated list doesn't double up. */
+export function mergeReports(a: RawReport | null, b: RawReport): RawReport {
+  if (!a) return b;
+  const key = (i: RawReport['items'][number]) => `${i.name}|${i.address}`.toLowerCase().replace(/[^a-z0-9|]/g, '');
+  const have = new Set(b.items.map(key));
+  return { summary: b.summary || a.summary, items: [...b.items, ...a.items.filter((i) => !have.has(key(i)))], coverage_notes: (b.coverage_notes?.length ? b.coverage_notes : a.coverage_notes) ?? [] };
+}
+
+export const continuePrompt = (found: number, want: number, used: number, max: number) =>
+  `You found ${found} item${found === 1 ? '' : 's'} using ${used} of ${max} searches. The goal is at least ${want}. Keep researching with different queries you haven't tried yet: other main streets and cross streets, nearby neighborhoods, the ZIP code, "coming soon", "now open", "closing", "under construction", and local news, food and real estate outlets. Only add items that are real, sourced and inside the area. Then reply with the complete report, including the earlier items, in the same <report> JSON format.`;
+
 export class AnthropicResearcher implements Researcher {
   name = 'anthropic';
   private key: string; private model: string; private f: typeof fetch; private base: string;
@@ -129,6 +140,9 @@ export class AnthropicResearcher implements Researcher {
     const messages: { role: 'user' | 'assistant'; content: any }[] = [{ role: 'user', content: userPrompt(req) }];
     const usage = { input: 0, output: 0, searches: 0 };
     let text = '';
+    let tools2 = tools;
+    let nudges = 0;
+    let earlier: ReturnType<typeof parseReport> | null = null;
     const onBlock = (b: Block) => {
       if (b.type === 'server_tool_use' && b.name === 'web_search' && b.input?.query) { progress.queries.push(String(b.input.query)); onProgress({ ...progress, queries: [...progress.queries] }); }
       if (b.type === 'web_search_tool_result' && Array.isArray(b.content)) for (const r of b.content) if (r.url) seenUrls.set(r.url, { title: r.title ?? r.url, pageAge: r.page_age ?? null });
@@ -139,8 +153,8 @@ export class AnthropicResearcher implements Researcher {
       }
       if (b.type === 'text' && Array.isArray(b.citations)) for (const c of b.citations) if (c.url && !seenUrls.has(c.url)) seenUrls.set(c.url, { title: c.title ?? c.url });
     };
-    for (let turn = 0; turn < 12; turn++) {
-      const r = await this.call({ model: this.model, max_tokens: 16_000, system: systemPrompt(req.sources), messages, tools, stream: true }, signal);
+    for (let turn = 0; turn < 16; turn++) {
+      const r = await this.call({ model: this.model, max_tokens: 16_000, system: systemPrompt(req.sources), messages, tools: tools2, stream: true }, signal);
       const m = await readStream(r.body!, onBlock);
       usage.input += m.usage.input; usage.output += m.usage.output; usage.searches += m.usage.searches;
       text = m.content.filter((b) => b.type === 'text').map((b) => b.text).join('');
@@ -150,10 +164,26 @@ export class AnthropicResearcher implements Researcher {
         continue;
       }
       if (m.stopReason === 'max_tokens' && !/<\/report>/.test(text)) throw new Error('The research ran out of room before writing the report.');
+      // Smaller models often stop early. If it found too few items with most of the search budget unused, ask it to keep going.
+      const want = req.minItems ?? 0;
+      const left = req.maxSearches - usage.searches;
+      if (nudges < 2 && want && left >= Math.max(3, req.maxSearches * 0.3) && !signal.aborted) {
+        let found: ReturnType<typeof parseReport> | null = null;
+        try { found = parseReport(text); } catch { /* no usable report yet */ }
+        if (found && found.items.length < want) {
+          nudges++;
+          earlier = mergeReports(earlier, found);
+          messages.push({ role: 'assistant', content: m.content });
+          messages.push({ role: 'user', content: continuePrompt(found.items.length, want, usage.searches, req.maxSearches) });
+          tools2 = tools.map((t) => (t.name === 'web_search' ? { ...t, max_uses: left } : t));
+          continue;
+        }
+      }
       break;
     }
     onProgress({ ...progress, stage: 'checking' });
-    const report = parseReport(text);
+    let report: ReturnType<typeof parseReport>;
+    try { report = mergeReports(earlier, parseReport(text)); } catch (e) { if (earlier) report = earlier; else throw e; }
     const u = { searches: usage.searches || progress.queries.length, inputTokens: usage.input, outputTokens: usage.output };
     return { report, seenUrls, usage: { ...u, costUsd: costOf(this.model, u) } };
   }
